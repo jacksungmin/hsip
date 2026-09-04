@@ -33,7 +33,14 @@ RUN for f in public/*.db public/*.pmtiles; do \
     done
 
 RUN npm ci
-RUN npx vite build
+
+# Data-file URLs are built from import.meta.env.BASE_URL, and the SQLite
+# worker resolves a relative BASE_URL against its own /assets/ location, not
+# the site root — so a relative base (vite.config.ts's default) 404s the
+# crash database when served at a domain root. --base "/" pins BASE_URL to
+# an absolute path that resolves the same way from the worker as from the
+# page. (GitHub Pages avoids this by passing an absolute "/hsip/" instead.)
+RUN npx vite build --base /
 
 FROM node:20-slim
 RUN npm install -g serve

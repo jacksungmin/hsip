@@ -1,0 +1,8 @@
+[build]
+  command = "npx vite build --base /"
+  publish = "dist"
+
+# See the comment above the equivalent build step in Dockerfile: data-file
+# URLs resolve against BASE_URL, and the SQLite worker resolves a relative
+# BASE_URL against its own /assets/ location rather than the site root, so
+# the crash database 404s without an absolute base.

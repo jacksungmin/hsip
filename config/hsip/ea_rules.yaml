@@ -1,0 +1,279 @@
+# H-GAC Emphasis Area tagging rules
+# Source: H-GAC SAP Emphasis Area Definitions (PDF)
+# Cross-referenced against KH's txdot_csv_crash_process.py
+#
+# Schema:
+#   Each rule has an id (bare, no EA_ prefix), label, and one or more paths.
+#   Pipeline adds EA_ prefix to produce output column names.
+#   Each path evaluates against a CRIS table (crash, unit, person).
+#   Paths roll up to crash level via aggregate (any | any_nullable).
+#   Multiple paths combine with combine (or | and, default: or).
+#   Paths can be nested in a group with its own combine.
+#
+# Condition language:
+#   field + in: [values]        -- field value in list
+#   field + not_in: [values]    -- field has a value AND it is not in the list,
+#                                  so a blank field matches neither in nor not_in
+#   field + range: [min, max]   -- field value between min and max inclusive
+#   and: [conditions]           -- all must match
+#   or: [conditions]            -- any must match
+#
+# A misspelled field name evaluates to false for every row rather than
+# failing, so a rule with a typo tags nothing and says nothing. See the
+# longer note in hsip_rules.yaml, which shares this language.
+#
+# Person table = merged person + primaryperson records.
+
+version: 1
+
+rules:
+
+  # --- Behavioral ---
+
+  # EA_01: any unit where contributing factor is speed-related
+  # CRIS codes: 22=Failure to Control Speed, 60=Speeding Unsafe, 61=Speeding Over Limit
+  - id: 01_Speed
+    label: Speed Related
+    paths:
+      - table: unit
+        aggregate: any
+        condition:
+          or:
+            - field: Contrib_Factr_1_ID
+              in: [22, 60, 61]
+            - field: Contrib_Factr_2_ID
+              in: [22, 60, 61]
+            - field: Contrib_Factr_3_ID
+              in: [22, 60, 61]
+
+  # EA_02: impaired driver detected via unit factors OR person test results
+  # Unit path: factor codes AND motor vehicle unit type
+  # Person path: driver/motorcycle driver AND positive alcohol or drug test
+  # CRIS codes: 45=Had Been Drinking, 62=Taking Medication,
+  #   67=Under Influence Alcohol, 68=Under Influence Drug
+  #   Unit_Desc: 1=Motor Vehicle, 5=Motorized Conveyance, 7=Non-Contact
+  #   Prsn_Type: 1=Driver, 5=Driver of Motorcycle Type Vehicle
+  #   Prsn_Alc_Rslt: 1=Positive, Prsn_Drg_Rslt: 1=Positive
+  - id: 02_Impaired
+    label: Impaired Driving
+    paths:
+      - table: unit
+        aggregate: any
+        condition:
+          and:
+            - or:
+                - field: Contrib_Factr_1_ID
+                  in: [45, 62, 67, 68]
+                - field: Contrib_Factr_2_ID
+                  in: [45, 62, 67, 68]
+                - field: Contrib_Factr_3_ID
+                  in: [45, 62, 67, 68]
+            - field: Unit_Desc_ID
+              in: [1, 5, 7]
+      - table: person
+        aggregate: any
+        condition:
+          and:
+            - field: Prsn_Type_ID
+              in: [1, 5]
+            - or:
+                - field: Prsn_Alc_Rslt_ID
+                  in: [1]
+                - field: Prsn_Drg_Rslt_ID
+                  in: [1]
+    combine: or
+
+  # EA_03: any unit where contributing factor is distraction-related
+  # CRIS codes: 19=Distraction In Vehicle, 20=Driver Inattention,
+  #   72=Cell/Mobile Phone Use
+  - id: 03_Distracted
+    label: Distracted Driving
+    paths:
+      - table: unit
+        aggregate: any
+        condition:
+          or:
+            - field: Contrib_Factr_1_ID
+              in: [19, 20, 72]
+            - field: Contrib_Factr_2_ID
+              in: [19, 20, 72]
+            - field: Contrib_Factr_3_ID
+              in: [19, 20, 72]
+
+  # EA_04: any person (driver or passenger) not wearing restraint
+  # CRIS codes: Prsn_Type 1=Driver, 2=Passenger/Occupant
+  #   Prsn_Rest 8=None
+  - id: 04_OccProt
+    label: Occupant Protection
+    paths:
+      - table: person
+        aggregate: any
+        condition:
+          and:
+            - field: Prsn_Type_ID
+              in: [1, 2]
+            - field: Prsn_Rest_ID
+              in: [8]
+
+  # EA_05: any unit where contributing factor is wrong way
+  # CRIS codes: 71=Wrong Way - One Way Road
+  - id: 05_WrongWay
+    label: Wrong Way Driving
+    paths:
+      - table: unit
+        aggregate: any
+        condition:
+          or:
+            - field: Contrib_Factr_1_ID
+              in: [71]
+            - field: Contrib_Factr_2_ID
+              in: [71]
+            - field: Contrib_Factr_3_ID
+              in: [71]
+
+  # --- Vulnerable Road Users ---
+
+  # EA_06: any driver aged 15-20. Nullable: null if no person has known age.
+  # CRIS codes: Prsn_Type 1=Driver, 5=Driver of Motorcycle Type Vehicle
+  - id: 06_Young
+    label: Young Drivers
+    nullable: true
+    paths:
+      - table: person
+        aggregate: any_nullable
+        known_field: Prsn_Age
+        condition:
+          and:
+            - field: Prsn_Type_ID
+              in: [1, 5]
+            - field: Prsn_Age
+              range: [15, 20]
+
+  # EA_07: any driver aged 65+. Nullable: null if no person has known age.
+  # CRIS codes: Prsn_Type 1=Driver, 5=Driver of Motorcycle Type Vehicle
+  - id: 07_Old
+    label: Older Drivers
+    nullable: true
+    paths:
+      - table: person
+        aggregate: any_nullable
+        known_field: Prsn_Age
+        condition:
+          and:
+            - field: Prsn_Type_ID
+              in: [1, 5]
+            - field: Prsn_Age
+              range: [65, 120]
+
+  # EA_08: pedestrian involved, detected via crash harm event OR person type
+  # CRIS codes: Harm_Evnt 1=Pedestrian, Prsn_Type 4=Pedestrian
+  - id: 08_Ped
+    label: Pedestrian Involved
+    paths:
+      - table: crash
+        condition:
+          field: Harm_Evnt_ID
+          in: [1]
+      - table: person
+        aggregate: any
+        condition:
+          field: Prsn_Type_ID
+          in: [4]
+    combine: or
+
+  # EA_09: bicycle involved, detected via crash harm event OR person type
+  # CRIS codes: Harm_Evnt 5=Pedalcyclist, Prsn_Type 3=Pedalcyclist
+  - id: 09_Bike
+    label: Bicycle Involved
+    paths:
+      - table: crash
+        condition:
+          field: Harm_Evnt_ID
+          in: [5]
+      - table: person
+        aggregate: any
+        condition:
+          field: Prsn_Type_ID
+          in: [3]
+    combine: or
+
+  # EA_10: motorcycle involved, detected via unit body style OR person type
+  # CRIS codes: Veh_Body_Styl 71=Motorcycle, 90=Motorcycle Police
+  #   Prsn_Type 5=Driver of Motorcycle, 6=Passenger on Motorcycle
+  - id: 10_Motorcycle
+    label: Motorcycle Involved
+    paths:
+      - table: unit
+        aggregate: any
+        condition:
+          field: Veh_Body_Styl_ID
+          in: [71, 90]
+      - table: person
+        aggregate: any
+        condition:
+          field: Prsn_Type_ID
+          in: [5, 6]
+    combine: or
+
+  # --- Infrastructure ---
+
+  # EA_11: crash at or related to intersection
+  # CRIS codes: Intrsct_Relat 1=Intersection, 2=Intersection Related
+  - id: 11_Int
+    label: Intersection Related
+    paths:
+      - table: crash
+        condition:
+          field: Intrsct_Relat_ID
+          in: [1, 2]
+
+  # EA_12: roadway departure -- off road/shoulder/median AND single-vehicle collision type
+  # CRIS codes: Road_Relat 2=Off Roadway, 3=Shoulder, 4=Median
+  #   FHE_Collsn 1=OMV Going Straight, 2=OMV Turning Right,
+  #   3=OMV Turning Left, 4=OMV Backing, 5=OMV Other
+  - id: 12_DepartRdwy
+    label: Roadway Departure
+    paths:
+      - table: crash
+        condition:
+          and:
+            - field: Road_Relat_ID
+              in: [2, 3, 4]
+            - field: FHE_Collsn_ID
+              in: [1, 2, 3, 4, 5]
+
+  # EA_13: lane departure -- head-on (both going straight) AND wrong side factor
+  # Cross-table AND: crash condition AND unit condition both required.
+  # CRIS codes: FHE_Collsn 30=OD Both Going Straight
+  #   Contrib_Factr 70=Wrong Side - Not Passing
+  - id: 13_DepartLn
+    label: Lane Departure
+    paths:
+      - table: crash
+        condition:
+          field: FHE_Collsn_ID
+          in: [30]
+      - table: unit
+        aggregate: any
+        condition:
+          or:
+            - field: Contrib_Factr_1_ID
+              in: [70]
+            - field: Contrib_Factr_2_ID
+              in: [70]
+            - field: Contrib_Factr_3_ID
+              in: [70]
+    combine: and
+
+  # EA_14: crash in dark or underlit conditions
+  # NOTE: PDF says Road_Relat_ID but values 3/4/6 are Light_Cond codes.
+  #   PDF has a typo. KH code correctly uses Light_Cond_ID.
+  # CRIS codes: Light_Cond 3=Dark Not Lighted, 4=Dark Lighted,
+  #   6=Dark Unknown Lighting
+  - id: 14_Dark
+    label: Dark Condition
+    paths:
+      - table: crash
+        condition:
+          field: Light_Cond_ID
+          in: [3, 4, 6]

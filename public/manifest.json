@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 3,
+  "buildId": "9e7aba51",
+  "builtAt": "2026-09-03T17:31:58+00:00",
+  "artifacts": {
+    "appDb": "app-f6400591.db",
+    "crashTiles": "crashes_kab-5eb36fba.pmtiles",
+    "jurisdictions": "jurisdictions-823a5a96.geojson"
+  },
+  "overlays": {
+    "high_injury_network": {
+      "file": "high_injury_network-a108bdf4.pmtiles",
+      "sourceLayer": "high_injury_network",
+      "fields": [
+        "ria_rte_id",
+        "network",
+        "tier_all"
+      ]
+    },
+    "roads": {
+      "file": "roads-0c662012.pmtiles",
+      "sourceLayer": "roads",
+      "fields": [
+        "ria_rte_id",
+        "f_system",
+        "num_lanes",
+        "spd_max",
+        "county_id",
+        "city_id"
+      ]
+    }
+  },
+  "crashData": {
+    "years": [
+      2018,
+      2019,
+      2020,
+      2021,
+      2022,
+      2023,
+      2024
+    ]
+  }
+}

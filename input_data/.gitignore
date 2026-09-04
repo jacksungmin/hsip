@@ -1,0 +1,5 @@
+# Ignore all files in this directory (source data, not tracked).
+# The directory itself is tracked so it exists on clone.
+*
+!.gitignore
+!README.md

@@ -1,0 +1,4 @@
+Severity,Label,Cost
+K,Fatal injury,4290000
+A,Incapacitating injury,4290000
+B,Non-incapacitating injury,360000

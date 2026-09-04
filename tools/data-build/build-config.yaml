@@ -1,0 +1,142 @@
+# Data build pipeline configuration.
+#
+# Paths are relative to repo root. Source data lives in input_data/
+# (gitignored). Outputs go to output_dir.
+#
+# EA and HSIP flag field lists are derived at runtime from
+# config/hsip/ (ea_rules.yaml and countermeasures.csv), not listed here.
+#
+# Column names pass through from source unchanged, except county_id
+# and city_id which are mapped via id_columns so the app always sees
+# consistent names regardless of source.
+
+output_dir: public
+
+crashes:
+  # CRIS CSV export root (folder containing *_crash_*.csv, etc.)
+  # Runs crash-prep tagging pipeline to produce tagged data.
+  cris_root: input_data/cris_export
+
+  # Which source columns hold county and city IDs.
+  # Renamed to county_id / city_id in all outputs.
+  id_columns:
+    county_id: Cnty_ID
+    city_id: City_ID
+
+  pmtiles:
+    # Fields included in tiles (filter/style only, not full attributes).
+    # county_id, city_id, and EA flag fields are added automatically.
+    # HSIP flags are NOT in tiles (only needed in SQLite for countermeasure selection).
+    fields: [Crash_ID, kabco, crash_year]
+    tippecanoe:
+      - -zg
+      - -r1                            # no zoom-rate thinning; keep all points per zoom
+      - --no-feature-limit             # gate dropping on tile bytes only, not feature count
+      - --maximum-tile-bytes=500000   # raise budget from 500KB default (5x); the "too much" threshold
+      - --drop-densest-as-needed       # over-budget tiles only: drop densest (overlapping) points first
+
+  db:
+    table: crashes
+
+# Display-only map overlay layers. One entry per tileset, and the entry key is
+# the only name involved: it becomes the published filename, the layer name
+# inside the tiles, the manifest key, and the `source` value that
+# config/overlays.yaml references. Lowercase letters, digits, hyphens.
+#
+# Adding an overlay is three edits and no code: drop the data in input_data/,
+# add an entry here, add a layer to config/overlays.yaml. Removing an entry
+# here retires the tileset — the next build of any kind drops it from the
+# manifest and prunes its files, so remove its layers from
+# config/overlays.yaml in the same breath or the app build will fail.
+#
+# `fields` is the whole field list: these columns are kept from the source and
+# they are the columns that reach the tiles, so anything an overlay wants to
+# style, filter, or split on has to be here. county_id and city_id are added
+# automatically for an entry that declares id_columns.
+#
+# Overlays never build a SQLite table. Nothing queries them analytically, and
+# a layer that does need analytical queries is not an overlay — it gets its
+# own top-level section like `crashes`.
+overlays:
+  roads:
+    source:
+      type: gpkg
+      path: input_data/hgac_roads.gpkg
+      # --- alternative: ESRI FeatureServer ---
+      # type: esri
+      # url: https://services6.arcgis.com/.../FeatureServer/0
+
+    # Which source columns hold county and city IDs. Renamed to
+    # county_id / city_id, which are then added to the tiles.
+    id_columns:
+      county_id: co
+      city_id: city
+
+    fields: [ria_rte_id, f_system, num_lanes, spd_max]
+
+    # Zoom-tier by functional class. Without this, low-zoom tiles hold all
+    # 128k segments (82% of them local streets), blow the 500KB tile budget,
+    # and tippecanoe's fallback strategy welds the densest features into
+    # their neighbours -- local geometry gets glued onto an interstate
+    # feature and inherits its f_system, so the network draws scrambled.
+    # Filtering by zoom keeps every tile under budget, so no fallback runs
+    # and every segment keeps its own attributes.
+    #
+    # Ladder: freeways (1-2) at all zooms, principal arterial (3) from z7,
+    # minor arterial (4) from z8, collectors (5-6) from z9, local (7) from
+    # z11. A class is simply absent below its zoom, so its checkbox in the
+    # layers panel draws nothing there.
+    #
+    # "*" applies to every layer in the tileset, which avoids repeating the
+    # layer name that build.py derives from this entry's key.
+    tippecanoe:
+      - -zg
+      - -j
+      # A YAML literal block, so this stays one argument to tippecanoe while
+      # reading as indented JSON here; the newlines are just JSON whitespace.
+      - |-
+        {"*": ["any",
+          ["<=", "f_system", 2],
+          ["all", [">=", "$zoom", 7],  ["==", "f_system", 3]],
+          ["all", [">=", "$zoom", 8],  ["==", "f_system", 4]],
+          ["all", [">=", "$zoom", 9], ["<=", "f_system", 6]],
+          [">=", "$zoom", 11]
+        ]}
+      # Safety valve if a future source overflows anyway: drop whole
+      # features, shortest first, rather than coalesce and scramble.
+      - --drop-smallest-as-needed
+
+  # One consolidated tileset covering both networks;
+  # `network` splits them ("Access Controlled" / "Non-Access Controlled") and
+  # `tier_all` carries the mutually exclusive tier bands. Most segments have no
+  # tier, and config/overlays.yaml hides those rather than the build dropping
+  # them.
+  high_injury_network:
+    source:
+      type: gpkg
+      path: input_data/HGAC HIN.gpkg
+      layer: outer_county_hin_v03_output
+
+    fields: [ria_rte_id, network, tier_all]
+
+    tippecanoe:
+      - --coalesce-densest-as-needed
+      - -zg
+
+jurisdictions:
+  # One layer holding counties and cities together: a `type` column of
+  # "county"/"city", a `name`, and cnty_id / city_id filled in on their own
+  # rows.
+  source:
+    type: gpkg
+    path: input_data/jurisdictions.gpkg
+    layer: jurisdictions
+    # --- alternative: fetch from ESRI at build time ---
+    # type: esri
+    # counties_url: https://services6.arcgis.com/bom7L4u7y1k0qkF1/arcgis/rest/services/hgac_boundary_layers/FeatureServer/1
+    # cities_url: https://services6.arcgis.com/bom7L4u7y1k0qkF1/arcgis/rest/services/hgac_boundary_layers/FeatureServer/0
+    # county_id_field: cnty_id
+    # city_id_field: city_id
+    # name_field: name
+
+  unincorporated_city_id: 9999

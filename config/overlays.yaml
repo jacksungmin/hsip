@@ -1,0 +1,98 @@
+# yaml-language-server: $schema=./schemas/overlays.schema.json
+#
+# Map overlay layers. Edit this file to add, remove, or restyle the
+# reference layers in the map's "Layers" panel. No code changes needed.
+#
+# Editing tips
+#   - Install the "YAML" extension (redhat.vscode-yaml) and this file
+#     validates as you type, with hover help on every key.
+#   - Run `npm run dev` and the map picks up saved edits immediately.
+#   - A malformed file fails the build, so a bad edit cannot reach the
+#     deployed site.
+#
+# What this file controls
+#   Overlay layers only. Crash points and the region boundary are not
+#   overlays; their styling lives in the app code.
+#
+# What it cannot do
+#   Add a new dataset. `source` must name a tileset the data build has
+#   already published, i.e. an entry under `overlays` in
+#   tools/data-build/build-config.yaml. Genuinely new data needs an entry
+#   there, the file in input_data/, and a data build run.
+#
+# Two layers may name the same `source`. The tileset is downloaded once
+# and both layers draw from it.
+#
+# Order matters twice: layers appear in the panel in the order below, and
+# later layers draw on top of earlier ones. Context goes first.
+#
+# One thing the build cannot check for you: column *values*. A wrong
+# `column` name fails the build, but a wrong `value` or `equals` is matched
+# literally against the data and simply matches nothing, so a layer can
+# come up empty. Copy those strings from the source data exactly, and quote
+# them as the entries below do.
+
+layers:
+  - id: roads-functional-class
+    label: Roads by functional class
+    source: roads
+    draw: line
+    visible: false
+    width: 2.5 # multiplier on the default zoom-scaled line width
+    opacity: 0.8
+    style:
+      type: categorical
+      column: f_system
+      categories:
+        - { value: 1, label: "Interstate", color: "#08306b" }
+        - { value: 2, label: "Other freeway or expressway", color: "#08519c" }
+        - { value: 3, label: "Other principal arterial", color: "#2171b5" }
+        - { value: 4, label: "Minor arterial", color: "#4292c6" }
+        - { value: 5, label: "Major collector", color: "#6baed6" }
+        - { value: 6, label: "Minor collector", color: "#9ecae1" }
+        - { value: 7, label: "Local", color: "#c6dbef" }
+      # No `other` entry, so segments whose f_system is missing or outside
+      # the list above are hidden. To show them instead, add:
+      #   other: { label: Unclassified, color: "#d4d4d4" }
+
+  # The two HIN layers below share one tileset and split it with `where`.
+  # Most segments in that tileset are on neither network's top-20%, and
+  # leaving out `other` is what keeps them off the map.
+  #
+  # The tiers are exclusive bands, not cumulative: a segment tagged
+  # "Top 10%" sits between the 5th and 10th percentile, so the labels read
+  # "5-10%" rather than repeating the source value. Switching on one band
+  # shows that band alone.
+  - id: hin-non-access-controlled
+    label: HIN — surface streets
+    source: high_injury_network
+    draw: line
+    visible: false
+    width: 2.5
+    opacity: 0.9
+    where: { column: network, equals: "Non-Access Controlled" }
+    style:
+      type: categorical
+      column: tier_all
+      categories:
+        - { value: "Top 5%", label: "Top 5%", color: "#54278f" }
+        - { value: "Top 10%", label: "5-10%", color: "#756bb1" }
+        - { value: "Top 15%", label: "10-15%", color: "#9e9ac8" }
+        - { value: "Top 20%", label: "15-20%", color: "#bcbddc" }
+
+  - id: hin-access-controlled
+    label: HIN — freeways
+    source: high_injury_network
+    draw: line
+    visible: false
+    width: 2.5
+    opacity: 0.9
+    where: { column: network, equals: "Access Controlled" }
+    style:
+      type: categorical
+      column: tier_all
+      categories:
+        - { value: "Top 5%", label: "Top 5%", color: "#54278f" }
+        - { value: "Top 10%", label: "5-10%", color: "#756bb1" }
+        - { value: "Top 15%", label: "10-15%", color: "#9e9ac8" }
+        - { value: "Top 20%", label: "15-20%", color: "#bcbddc" }

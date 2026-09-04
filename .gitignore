@@ -1,0 +1,40 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.local.md
+.codex
+.claude
+venv/
+__pycache__/
+# Everything here is written by the vite-plugin-*-config plugins from the
+# files in config/, on every build. Nothing in it is hand-edited.
+src/data/generated/
+
+# Transient data-build working copies; published artifacts are
+# content-hashed (see tools/data-build/output/publish.py)
+public/app.db
+public/crashes_kab.pmtiles
+public/roads.pmtiles
+public/hin.pmtiles
+public/jurisdictions.geojson

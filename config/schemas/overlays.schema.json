@@ -1,0 +1,201 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Map overlay layers",
+  "description": "Reference layers shown in the map's Layers panel. Edited by hand; see the comments at the top of overlays.yaml.",
+  "type": "object",
+  "required": [
+    "layers"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "layers": {
+      "description": "One entry per layer in the Layers panel, in the order they appear.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/layer"
+      }
+    }
+  },
+  "definitions": {
+    "layer": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "source",
+        "draw",
+        "style"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Unique identifier for this layer. Used internally; never shown to users. Lowercase letters, numbers and hyphens.",
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "label": {
+          "description": "Name shown to the user in the Layers panel.",
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "description": "Which tileset to draw from. Must be a key under `overlays` in public/manifest.json, i.e. an entry under `overlays` in tools/data-build/build-config.yaml, e.g. roads. Two layers may share one source.",
+          "type": "string",
+          "minLength": 1
+        },
+        "draw": {
+          "description": "How features are drawn. Must match the tileset's geometry.",
+          "enum": [
+            "line",
+            "point",
+            "polygon"
+          ]
+        },
+        "visible": {
+          "description": "Whether the layer is switched on when the app opens. Defaults to off.",
+          "type": "boolean",
+          "default": false
+        },
+        "width": {
+          "description": "Thickness multiplier. 1 is the default thickness, 2 is twice as thick. Applies to lines and points; ignored for polygons.",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1
+        },
+        "opacity": {
+          "description": "0 is invisible, 1 is fully solid.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 1
+        },
+        "where": {
+          "description": "Optional. Draw only the features whose column matches this value. Use it to split one tileset into several layers.",
+          "type": "object",
+          "required": [
+            "column",
+            "equals"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "column": {
+              "description": "Column in the tileset to test.",
+              "type": "string",
+              "minLength": 1
+            },
+            "equals": {
+              "description": "Keep features whose column equals this value.",
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ]
+            }
+          }
+        },
+        "style": {
+          "description": "How features are coloured.",
+          "oneOf": [
+            {
+              "$ref": "#/definitions/simpleStyle"
+            },
+            {
+              "$ref": "#/definitions/categoricalStyle"
+            }
+          ]
+        }
+      }
+    },
+    "simpleStyle": {
+      "description": "One colour for every feature.",
+      "type": "object",
+      "required": [
+        "type",
+        "color"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "simple"
+        },
+        "color": {
+          "$ref": "#/definitions/color"
+        }
+      }
+    },
+    "categoricalStyle": {
+      "description": "A colour per distinct value of a column. Each value becomes a legend row the user can switch on and off.",
+      "type": "object",
+      "required": [
+        "type",
+        "column",
+        "categories"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "categorical"
+        },
+        "column": {
+          "description": "Column in the tileset whose values decide the colour.",
+          "type": "string",
+          "minLength": 1
+        },
+        "categories": {
+          "description": "One entry per value to colour. Values not listed here are hidden, unless `other` is set below.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "value",
+              "label",
+              "color"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "value": {
+                "description": "The value in the column, exactly as it appears in the data. Quote it if it is text. Numbers must be whole.",
+                "type": [
+                  "string",
+                  "integer"
+                ]
+              },
+              "label": {
+                "description": "Name shown in the legend for this value.",
+                "type": "string",
+                "minLength": 1
+              },
+              "color": {
+                "$ref": "#/definitions/color"
+              }
+            }
+          }
+        },
+        "other": {
+          "description": "Optional. Adds a legend row for every value not listed in `categories`. Leave it out to hide those features instead.",
+          "type": "object",
+          "required": [
+            "label",
+            "color"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "color": {
+              "$ref": "#/definitions/color"
+            }
+          }
+        }
+      }
+    },
+    "color": {
+      "description": "Hex colour, e.g. \"#2171b5\". Quotes are required.",
+      "type": "string",
+      "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$"
+    }
+  }
+}

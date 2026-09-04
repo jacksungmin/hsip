@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=./schemas/app.schema.json
+#
+# What the app is called and what colour it is. Saved edits appear immediately
+# under `npm run dev`. A malformed file fails the build.
+#
+# Two images are swapped by replacing the file, not by editing here:
+#   config/assets/logo.png   navbar and splash mark
+#   public/favicon.png       browser tab icon
+
+identity:
+  appName: HSIP Sketch Planning Tool # navbar heading and browser tab; one line, no wrap
+  subtitle: H-GAC · Regional Data Lab # the small line under it
+  fullName: H-GAC HSIP Sketch Planning Tool # splash heading, long form
+
+# Hex only. Each colour drives several design tokens, so the UI stays
+# consistent. Greys, borders, and the K/A/B severity colours are not
+# configurable — see src/app.css and src/data/severityMeta.ts.
+theme:
+  primary: "#025773" # navbar, buttons, links. White text sits on it, so keep it dark.
+  primaryPlanning: "#1c938d" # replaces primary during the planning phase
+  foreground: "#002f47" # body text and headings
+  destructive: "#c6093b" # errors and destructive actions
+
+# One URL. A style.json is a vector basemap; a {z}/{x}/{y} template is raster.
+#   https://tiles.versatiles.org/assets/styles/neutrino/style.json
+#   https://basemaps.cartocdn.com/gl/positron-gl-style/style.json
+#   https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png
+#   https://tile.openstreetmap.org/{z}/{x}/{y}.png
+#
+# A copied tile URL may start with "{s}." — the build drops it and says so.
+# Nothing here is secret — it ships in the page, so no private API keys.
+#
+# The default is deliberately muted so crash points stay readable on top of it.
+support:
+  email: support@example.com # shown on error screens; mailto: link
+
+basemap:
+  url: https://tiles.versatiles.org/assets/styles/neutrino/style.json
+
+  # Required. Only you know what your tile provider asks for — copy it from them.
+  attribution: © OpenStreetMap contributors
+
+  # Raster only, both optional. maxZoom is the deepest zoom the provider has
+  # tiles for; set it wrong and the map blanks when zoomed in. tileSize is 512
+  # for an "@2x" endpoint.
+  # maxZoom: 19
+  # tileSize: 256

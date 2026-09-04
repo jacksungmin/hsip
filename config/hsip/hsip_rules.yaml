@@ -1,0 +1,1323 @@
+# HSIP work code tagging rules
+#
+# One rule per TxDOT HSIP work code. Each produces a 0/1 column,
+# HSIP_<id>, on every crash: 1 means this countermeasure is one that could
+# plausibly have addressed that crash. The app uses those flags to work out how
+# many crashes at a site a given countermeasure is credited against, which
+# becomes the benefit term in the SII calculation. So a rule that is too broad
+# inflates a countermeasure's benefit and a rule that is too narrow buries it.
+#
+# Rule ids are bare work codes; the pipeline adds the HSIP_ prefix.
+#
+# The ids must correspond exactly, one-to-one, with the `Work Code` column of
+# countermeasures.csv, because that CSV is what the build derives the flag
+# column list from (tools/data-build/config.py, derive_hsip_fields). Neither
+# half of a mismatch raises anything: a rule with no CSV row computes a column
+# nothing reads, and a CSV row with no rule leaves a countermeasure whose flag
+# is 0 for every crash, which the app reads as "addresses nothing" and quietly
+# scores at zero benefit. Add or remove a work code in both files together.
+#
+#
+# How to read a rule
+#
+# Ids and labels aside, a rule is one or more `paths`. Each path names a CRIS
+# table and a condition to evaluate against it:
+#
+#   - table: crash | unit | person
+#     condition: <condition>
+#     aggregate: any            # only for unit/person; see below
+#
+# `crash` has one row per crash, so a condition on it is already a per-crash
+# answer and needs no aggregate. `unit` and `person` have many rows per crash
+# (one per vehicle, one per occupant), so those paths need `aggregate: any`,
+# meaning "1 if any row for this crash matches". Nearly every rule here is a
+# single `crash` path; only a handful reach for `unit`.
+#
+# Conditions are a tree. Leaves test one field, branches combine them:
+#
+#   field: <CRIS column>        with one of
+#     in: [1, 2, 3]             value is in the list
+#     not_in: [1, 2]            value is present AND not in the list
+#     range: [10, 20]           value is between the bounds, inclusive
+#   and: [<condition>, ...]     every child must match
+#   or:  [<condition>, ...]     any child must match
+#
+# Rule 101 below reads: flag the crash if its first-harmful-event code is one
+# of 20, 21, 22, 30, or its road-relation code is one of 2, 3, 4.
+#
+# Two things about matching that are easy to get wrong. Values are compared
+# numerically, so CRIS codes go in unquoted. And `not_in` is not the negation
+# of `in`: it requires the field to have a value, so a crash with a blank field
+# matches neither `in: [1]` nor `not_in: [1]`.
+#
+#
+# The gotcha worth knowing
+#
+# A misspelled field name does not fail. It evaluates to false for every row,
+# so the work code ends up flagged on zero crashes and the countermeasure
+# silently scores no benefit for anyone. Nothing in the build or the app will
+# tell you. Copy field names exactly from the CRIS extract specification
+# (input_data/cris_export/public-extract-file-specification.xlsx), and after
+# editing a rule, check that its flag count is not zero.
+#
+#
+# Two less common shapes, both used below
+#
+# `match_all: true` replaces `paths` entirely and flags every crash. It is for
+# countermeasures whose applicability is not a function of crash attributes at
+# all — see 111, 114, 133, 220. It means "do not filter", not "applies to
+# everything", and the narrowing happens when a user picks a site.
+#
+# Multiple paths combine with the rule's `combine` (`or` by default, or `and`),
+# and a path may instead be a `group` with its own nested `paths` and
+# `combine`. Rule 524 is the only rule here that uses either.
+#
+# The condition language is shared with ea_rules.yaml and implemented in
+# tools/data-build/crash_prep/tag_engine.py, which is authoritative if this
+# summary and the code ever disagree.
+
+version: 1
+rules:
+- id: 101
+  label: Install Warning/Guide Signs
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 30
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+- id: 107
+  label: Install Traffic Signal
+  paths:
+  - table: crash
+    condition:
+      or:
+      - and:
+        - field: Intrsct_Relat_ID
+          in:
+          - 1
+          - 2
+        - field: FHE_Collsn_ID
+          range:
+          - 10
+          - 39
+      - field: Harm_Evnt_ID
+        in:
+        - 1
+        - 5
+- id: 108
+  label: Improve Traffic Signals (Hardware)
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: Intrsct_Relat_ID
+        in:
+        - 1
+        - 2
+      - or:
+        - field: FHE_Collsn_ID
+          range:
+          - 10
+          - 39
+        - field: Harm_Evnt_ID
+          in:
+          - 1
+          - 5
+- id: 109
+  label: Implement Leading Pedestrian Interval (LPI) Timing
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+- id: 110
+  label: Install Pedestrian Signal
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+# First of the four match_all rules (see header): no crash attribute decides
+# whether signal coordination is applicable, so this flags every crash and
+# leaves the narrowing to the user's choice of site.
+- id: 111
+  label: Install Signal Coordination or Adaptive Signal Timing (Interconnect Signals)
+  match_all: true
+- id: 113
+  label: Install Delineators
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: Light_Cond_ID
+        in:
+        - 3
+        - 4
+        - 6
+- id: 114
+  label: Install School Zones
+  match_all: true
+- id: 115
+  label: Install Pedestrian Countdown Timer
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+- id: 118
+  label: Replace Flashing Beacon with a Traffic Signal
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: Intrsct_Relat_ID
+        in:
+        - 1
+        - 2
+      - or:
+        - field: FHE_Collsn_ID
+          range:
+          - 10
+          - 39
+        - field: Harm_Evnt_ID
+          in:
+          - 1
+          - 5
+- id: 119
+  label: Install Overhead Signs
+  paths:
+  - table: crash
+    condition:
+      field: FHE_Collsn_ID
+      range:
+      - 20
+      - 29
+- id: 122
+  label: Install Advanced Warning Beacons (Intersection - Existing Warning Signs)
+  paths:
+  - table: crash
+    condition:
+      field: Intrsct_Relat_ID
+      in:
+      - 1
+      - 2
+- id: 123
+  label: Install Advanced Warning Beacons (Curve - Existing Warning Signs)
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 30
+- id: 124
+  label: Install Advanced Warning Beacons and Signs (Intersection)
+  paths:
+  - table: crash
+    condition:
+      field: Intrsct_Relat_ID
+      in:
+      - 1
+      - 2
+- id: 125
+  label: Install Advanced Warning Beacons and Signs (Curve)
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 30
+- id: 128
+  label: Install Advanced Warning Signs (Intersection)
+  paths:
+  - table: crash
+    condition:
+      field: Intrsct_Relat_ID
+      in:
+      - 1
+      - 2
+- id: 130
+  label: Install Advanced Warning Signs (Curve)
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 30
+- id: 131
+  label: Improve Pedestrian Signals
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+- id: 132
+  label: Install Advance Warning Beacons and Signs
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 30
+- id: 133
+  label: Improve School Zone
+  match_all: true
+- id: 134
+  label: Install Advanced Pedestrian Crossing Signage
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+      - 5
+- id: 136
+  label: Install LED Flashing Chevrons (Curve)
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 30
+- id: 137
+  label: Install Chevrons (Curve)
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 30
+- id: 138
+  label: Install Flashing Yellow Arrow
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: Intrsct_Relat_ID
+        in:
+        - 1
+        - 2
+      - field: FHE_Collsn_ID
+        in:
+        - 29
+        - 34
+        - 36
+- id: 139
+  label: Install Surface Mounted Delineators on Centerline
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: FHE_Collsn_ID
+        in:
+        - 21
+        - 30
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+- id: 140
+  label: Wrong Way Driver Warning Signs
+  paths:
+  - table: unit
+    aggregate: any
+    condition:
+      or:
+      - field: Contrib_Factr_1_ID
+        in:
+        - 71
+      - field: Contrib_Factr_2_ID
+        in:
+        - 71
+      - field: Contrib_Factr_3_ID
+        in:
+        - 71
+- id: 141
+  label: Wrong Way Driver Warning Markings
+  paths:
+  - table: unit
+    aggregate: any
+    condition:
+      or:
+      - field: Contrib_Factr_1_ID
+        in:
+        - 71
+      - field: Contrib_Factr_2_ID
+        in:
+        - 71
+      - field: Contrib_Factr_3_ID
+        in:
+        - 71
+- id: 142
+  label: Wrong Way Driver Advanced Technologies
+  paths:
+  - table: unit
+    aggregate: any
+    condition:
+      or:
+      - field: Contrib_Factr_1_ID
+        in:
+        - 71
+      - field: Contrib_Factr_2_ID
+        in:
+        - 71
+      - field: Contrib_Factr_3_ID
+        in:
+        - 71
+- id: 143
+  label: Pedestrian Hybrid Beacon
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+- id: 144
+  label: Install Rectangular Rapid Flashing Beacon (RRFB)
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+- id: 145
+  label: Flashing Stop Beacon or LED-embedded Stop Signs
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: Intrsct_Relat_ID
+        in:
+        - 1
+        - 2
+      - field: FHE_Collsn_ID
+        range:
+        - 10
+        - 19
+- id: 150
+  label: Dynamic Speed Feedback Signs
+  paths:
+  - table: crash
+    condition:
+      field: Road_Part_Adj_ID
+      in:
+      - 1
+- id: 151
+  label: Variable Speed Limit (VSL)
+  paths:
+  - table: crash
+    condition:
+      field: Road_Part_Adj_ID
+      in:
+      - 1
+      - 3
+      - 4
+      - 5
+- id: 201
+  label: Install Median Barrier
+  paths:
+  - table: crash
+    condition:
+      field: FHE_Collsn_ID
+      in:
+      - 30
+- id: 203
+  label: Install Raised Median
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: Road_Part_Adj_ID
+        in:
+        - 1
+      - field: FHE_Collsn_ID
+        in:
+        - 10
+        - 14
+        - 20
+        - 21
+        - 22
+        - 24
+        - 26
+        - 28
+        - 29
+        - 30
+        - 34
+        - 36
+        - 38
+- id: 204
+  label: Flatten Side Slope
+  paths:
+  - table: crash
+    condition:
+      field: Road_Relat_ID
+      in:
+      - 3
+- id: 209
+  label: Safety Treat Fixed Objects
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+      - field: Obj_Struck_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 25
+        - 26
+        - 29
+        - 30
+        - 31
+        - 32
+        - 33
+        - 34
+        - 35
+        - 36
+        - 40
+        - 41
+        - 42
+        - 56
+        - 57
+        - 58
+        - 60
+        - 62
+        - 63
+- id: 217
+  label: Install Impact Attenuation System
+  paths:
+  - table: crash
+    condition:
+      field: Obj_Struck_ID
+      in:
+      - 20
+      - 30
+      - 40
+      - 42
+- id: 218
+  label: Widen Bridge
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Bridge_Detail_ID
+        range:
+        - 1
+        - 6
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 30
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+- id: 220
+  label: Truck Parking Facilities
+  match_all: false
+- id: 225
+  label: Pedestrian Crossing Deterrent
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+- id: 303
+  label: Resurfacing
+  paths:
+  - table: crash
+    condition:
+      field: Surf_Cond_ID
+      in:
+      - 2
+      - 5
+      - 6
+      - 9
+- id: 304
+  label: Safety Lighting (Non-Intersection)
+  paths:
+  - table: crash
+    condition:
+      field: Light_Cond_ID
+      in:
+      - 3
+      - 4
+      - 6
+- id: 305
+  label: Safety Lighting (Intersection)
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: Light_Cond_ID
+        in:
+        - 3
+        - 4
+        - 6
+      - field: Intrsct_Relat_ID
+        in:
+        - 1
+        - 2
+- id: 401
+  label: Install Pavement Markings
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 1
+      - field: FHE_Collsn_ID
+        in:
+        - 21
+        - 30
+- id: 402
+  label: Install Edgeline Marking
+  paths:
+  - table: crash
+    condition:
+      field: Road_Relat_ID
+      in:
+      - 2
+      - 3
+      - 4
+- id: 403
+  label: Install Pedestrian Crosswalk
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+- id: 404
+  label: Install Centerline Marking
+  paths:
+  - table: crash
+    condition:
+      field: FHE_Collsn_ID
+      in:
+      - 30
+- id: 407
+  label: Install Sidewalks
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+      - 5
+- id: 408
+  label: Add Shared Use Path
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+      - 5
+- id: 409
+  label: Install Pedestrian Refuge Islands
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+      - 5
+- id: 410
+  label: Install Dedicated Bicycle Lanes
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 5
+- id: 502
+  label: Widen Lane(s)
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 21
+        - 30
+- id: 503
+  label: Widen Paved Shoulder (to 5 ft. or less)
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: Harm_Evnt_ID
+        in:
+        - 4
+- id: 504
+  label: Construct Paved Shoulders (1-4 ft.)
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 23
+        - 24
+        - 30
+      - field: Harm_Evnt_ID
+        in:
+        - 4
+- id: 505
+  label: Improve Vertical Alignment
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 13
+        - 14
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 30
+        - 32
+        - 34
+- id: 506
+  label: Improve Horizontal Alignment
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 30
+- id: 507
+  label: Increase Superelevation
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 30
+- id: 508
+  label: Realign Intersection
+  paths:
+  - table: crash
+    condition:
+      or:
+      - and:
+        - field: Intrsct_Relat_ID
+          in:
+          - 1
+          - 2
+        - field: FHE_Collsn_ID
+          range:
+          - 10
+          - 39
+      - field: Harm_Evnt_ID
+        in:
+        - 1
+        - 5
+- id: 509
+  label: Channelization
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: Intrsct_Relat_ID
+        not_in:
+        - 4
+      - field: FHE_Collsn_ID
+        range:
+        - 10
+        - 39
+- id: 510
+  label: Construct Turn Arounds
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: Intrsct_Relat_ID
+        in:
+        - 1
+        - 2
+      - field: FHE_Collsn_ID
+        in:
+        - 12
+        - 14
+        - 18
+        - 20
+        - 22
+        - 24
+        - 26
+        - 28
+        - 29
+        - 34
+- id: 515
+  label: Construct Interchange
+  paths:
+  - table: crash
+    condition:
+      field: Intrsct_Relat_ID
+      in:
+      - 1
+      - 2
+- id: 516
+  label: Close Crossover
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: Road_Part_Adj_ID
+        in:
+        - 1
+      - field: FHE_Collsn_ID
+        in:
+        - 10
+        - 14
+        - 20
+        - 21
+        - 22
+        - 24
+        - 26
+        - 28
+        - 29
+        - 30
+        - 34
+        - 38
+- id: 517
+  label: Add Through Lane
+  paths:
+  - table: crash
+    condition:
+      field: FHE_Collsn_ID
+      in:
+      - 20
+      - 21
+      - 22
+      - 23
+      - 24
+      - 26
+      - 27
+      - 29
+      - 30
+- id: 518
+  label: Install Continuous Turn Lane
+  paths:
+  - table: crash
+    condition:
+      field: FHE_Collsn_ID
+      in:
+      - 20
+      - 21
+      - 22
+      - 24
+      - 26
+      - 28
+      - 29
+      - 30
+      - 34
+      - 38
+- id: 519
+  label: Add Left Turn Lane
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 24
+        - 26
+        - 28
+        - 29
+        - 30
+        - 34
+        - 38
+      - field: Intrsct_Relat_ID
+        not_in:
+        - 4
+- id: 520
+  label: Lengthen Left Turn Lane
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: FHE_Collsn_ID
+        range:
+        - 20
+        - 22
+      - field: Intrsct_Relat_ID
+        not_in:
+        - 4
+- id: 521
+  label: Add Right Turn Lane
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 23
+        - 25
+        - 26
+        - 27
+        - 33
+        - 36
+      - field: Intrsct_Relat_ID
+        not_in:
+        - 4
+- id: 522
+  label: Lengthen Right Turn Lane
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: FHE_Collsn_ID
+        range:
+        - 20
+        - 22
+      - field: Intrsct_Relat_ID
+        not_in:
+        - 4
+- id: 523
+  label: Construct Pedestrian Over/Under Pass
+  paths:
+  - table: crash
+    condition:
+      field: Harm_Evnt_ID
+      in:
+      - 1
+# The only rule using a nested group, and the only one whose paths combine with
+# anything other than the default `or`. It reads: flag the crash if (a large
+# vehicle was involved AND the harmful event was code 7), OR the collision type
+# was 13, 20, or 21. The inner `combine: and` applies only within the group;
+# the group's result then ors with the path that follows it.
+- id: 524
+  label: Increase Turning Radius
+  paths:
+  - group:
+      combine: and
+      paths:
+      - table: unit
+        aggregate: any
+        condition:
+          field: Veh_Body_Styl_ID
+          in:
+          - 87
+          - 102
+      - table: crash
+        condition:
+          field: Harm_Evnt_ID
+          in:
+          - 7
+  - table: crash
+    condition:
+      field: FHE_Collsn_ID
+      in:
+      - 13
+      - 20
+      - 21
+      - 30
+      - 33
+  combine: or
+- id: 525
+  label: Convert to One Way Frontage Roads
+  paths:
+  - table: crash
+    condition:
+      field: Road_Part_Adj_ID
+      in:
+      - 2
+- id: 526
+  label: Positive Offset Left-turn Lanes
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 24
+        - 26
+        - 28
+        - 29
+        - 30
+        - 34
+        - 38
+      - field: Intrsct_Relat_ID
+        in:
+        - 1
+        - 2
+- id: 532
+  label: Milled Edgeline Rumble Strips
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 30
+- id: 533
+  label: Profile Edgeline Markings
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 30
+      - field: Surf_Cond_ID
+        in:
+        - 2
+        - 5
+        - 6
+        - 9
+- id: 534
+  label: Raised Edgeline Rumble Strips
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 30
+      - field: Surf_Cond_ID
+        in:
+        - 2
+        - 5
+        - 6
+        - 9
+- id: 536
+  label: Widen Paved Shoulders (to >5 ft.)
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: Harm_Evnt_ID
+        in:
+        - 4
+- id: 537
+  label: Construct Paved Shoulders (>= 5ft.)
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 23
+        - 24
+        - 30
+      - field: Harm_Evnt_ID
+        in:
+        - 4
+- id: 538
+  label: Convert 2 Lane Facility to 4 Lane Divided
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 10
+        - 13
+        - 14
+        - 20
+        - 21
+        - 22
+        - 24
+        - 30
+- id: 540
+  label: Install Passing Lanes on 2 Lane Road
+  paths:
+  - table: crash
+    condition:
+      and:
+      - field: Road_Relat_ID
+        in:
+        - 1
+        - 2
+        - 3
+      - field: FHE_Collsn_ID
+        in:
+        - 20
+        - 21
+        - 22
+        - 23
+        - 24
+        - 30
+- id: 541
+  label: Provide Additional Paved Surface Width
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: Road_Relat_ID
+        in:
+        - 2
+        - 3
+        - 4
+      - field: FHE_Collsn_ID
+        in:
+        - 21
+        - 30
+      - field: Harm_Evnt_ID
+        in:
+        - 10
+- id: 542
+  label: Milled Centerline Rumble Strips
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: FHE_Collsn_ID
+        in:
+        - 30
+      - field: Road_Relat_ID
+        in:
+        - 3
+        - 4
+- id: 543
+  label: Profile Centerline Markings
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: FHE_Collsn_ID
+        in:
+        - 30
+      - field: Road_Relat_ID
+        in:
+        - 3
+        - 4
+      - field: Surf_Cond_ID
+        in:
+        - 2
+        - 5
+        - 6
+        - 9
+- id: 544
+  label: Raised Centerline Rumble Strips
+  paths:
+  - table: crash
+    condition:
+      or:
+      - field: FHE_Collsn_ID
+        in:
+        - 30
+      - field: Road_Relat_ID
+        in:
+        - 3
+        - 4
+      - field: Surf_Cond_ID
+        in:
+        - 2
+        - 5
+        - 6
+        - 9
+- id: 545
+  label: Transverse Rumble Strips
+  paths:
+  - table: crash
+    condition:
+      field: Intrsct_Relat_ID
+      in:
+      - 1
+      - 2
+- id: 547
+  label: Construct a Single-Lane Roundabout
+  paths:
+  - table: crash
+    condition:
+      field: Intrsct_Relat_ID
+      in:
+      - 1
+      - 2
+- id: 550
+  label: Restricted Crossing U-Turn (RCUT)
+  paths:
+  - table: crash
+    condition:
+      field: Intrsct_Relat_ID
+      in:
+      - 1
+      - 2
+- id: 551
+  label: Median U-Turn (MUT)
+  paths:
+  - table: crash
+    condition:
+      field: Intrsct_Relat_ID
+      in:
+      - 1
+      - 2

@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "App presentation",
+  "description": "What the app is called and what colour it is. Edited by hand; see the comments at the top of app.yaml.",
+  "type": "object",
+  "required": ["identity", "theme", "basemap", "support"],
+  "additionalProperties": false,
+  "properties": {
+    "basemap": {
+      "description": "The map's background layer. One URL: a vector style URL, or a raster tile template recognised by its {z}/{x}/{y} placeholders. Anything here is public and ships in the page, so no private API keys.",
+      "type": "object",
+      "required": ["url", "attribution"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "description": "Vector style URL (e.g. https://tiles.versatiles.org/assets/styles/neutrino/style.json) or raster tile template (e.g. https://tile.openstreetmap.org/{z}/{x}/{y}.png). A raster template must have all three of {z}, {x}, {y}; a style URL must have none.",
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "attribution": {
+          "description": "Credit for the map data, shown in the map corner and on report maps. Most tile sources are built from OpenStreetMap and require attribution as a condition of use; copy the exact wording from your provider.",
+          "type": "string",
+          "minLength": 1
+        },
+        "maxZoom": {
+          "description": "Raster only. The deepest zoom the provider actually has tiles for; closer zooms stretch the deepest real tile. Leave it wrong and the map goes blank when the user zooms in. Defaults to 19, which suits OpenStreetMap and sources derived from it.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 24
+        },
+        "tileSize": {
+          "description": "Raster only. 256 for a normal endpoint, 512 for a high-resolution \"@2x\" one. Defaults to 256.",
+          "type": "integer",
+          "enum": [256, 512]
+        }
+      }
+    },
+    "identity": {
+      "description": "Names shown to the user.",
+      "type": "object",
+      "required": ["appName", "subtitle", "fullName"],
+      "additionalProperties": false,
+      "properties": {
+        "appName": {
+          "description": "Navbar heading and browser tab title. Kept short: the navbar gives it one line and does not wrap.",
+          "type": "string",
+          "minLength": 1
+        },
+        "subtitle": {
+          "description": "The small line under the navbar heading. Attribution, programme, or agency.",
+          "type": "string",
+          "minLength": 1
+        },
+        "fullName": {
+          "description": "Splash screen heading, where there is room for the long form of the name.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "support": {
+      "description": "How to reach the team that maintains this deployment.",
+      "type": "object",
+      "required": ["email"],
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "description": "Shown on error screens as a mailto: link so the user can report a problem.",
+          "type": "string",
+          "format": "email",
+          "minLength": 1
+        }
+      }
+    },
+    "theme": {
+      "description": "Brand colours. Each drives several of the app's design tokens rather than one element. Hex only, because these values are written straight into a stylesheet.",
+      "type": "object",
+      "required": ["primary", "primaryPlanning", "foreground", "destructive"],
+      "additionalProperties": false,
+      "properties": {
+        "primary": {
+          "description": "Brand colour: navbar, primary buttons, links, focus rings. White text is drawn on top, so it must stay dark enough for white to read.",
+          "$ref": "#/definitions/hexColor"
+        },
+        "primaryPlanning": {
+          "description": "Navbar and accent colour while the user is in the planning phase. Should be clearly distinct from primary, since the shift signals the mode change, and equally dark enough for white text.",
+          "$ref": "#/definitions/hexColor"
+        },
+        "foreground": {
+          "description": "Body text and headings.",
+          "$ref": "#/definitions/hexColor"
+        },
+        "destructive": {
+          "description": "Errors, and actions that destroy something.",
+          "$ref": "#/definitions/hexColor"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$",
+      "examples": ["#025773", "#1c938d"]
+    }
+  }
+}

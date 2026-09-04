@@ -1,0 +1,5 @@
+# The Dockerfile clones the repo fresh from GitHub instead of using this
+# build context (see comment at the top of Dockerfile), so nothing here is
+# needed in the image — this just keeps the upload to Railway small.
+*
+!Dockerfile

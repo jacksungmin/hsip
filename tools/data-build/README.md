@@ -53,6 +53,13 @@ simplify the boundary coordinates.
   inside WSL (`sudo apt install tippecanoe`). Run the pipeline
   from the WSL terminal.
 
+  Without WSL, `notebooks/windows_data_build.ipynb` runs the same
+  pipeline from native Windows Python. It checks dependencies, falls
+  back to the GDAL/pyogrio PMTiles writer when `tippecanoe` isn't on
+  `PATH`, and breaks the build into cells (jurisdictions, crashes,
+  one overlay, full build) so a step can be re-run without repeating
+  the others.
+
 ## Setup (one time)
 
 ```

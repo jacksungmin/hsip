@@ -993,8 +993,10 @@ rules:
 # intersection to a turning-radius fix.
 #
 # Body style: the guidelines' decoding table lists 87 (truck-tractor) and 91
-# (semitrailer); this rule uses 87 and 102. Confirm both codes against the
-# current CRIS extract specification.
+# (semitrailer), but that numbering is not the one CRIS uses. In the CRIS
+# public extract specification (VEH_BODY_STYL_LKP), 87 is TRUCK TRACTOR, 102 is
+# TRAILER, SEMI-TRAILER, OR POLE TRAILER, and 91 does not exist. So this rule
+# uses 87 and 102; 91 would silently drop every semitrailer.
 - id: 524
   label: Increase Turning Radius
   combine: and

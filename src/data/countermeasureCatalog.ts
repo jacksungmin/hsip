@@ -10,6 +10,11 @@ const byWorkcode = new Map<string, Countermeasure>(
   catalog.map((cm) => [cm.workcode, cm]),
 )
 
+// Shown wherever a creditsAllCrashes countermeasure is evaluated: the
+// library, the appraisal table, and the report.
+export const CREDITS_ALL_CRASHES_NOTE =
+  "Credited against all KAB crashes at the site, per TxDOT. Confirm the site's crash pattern fits this countermeasure."
+
 export function list(): Countermeasure[] {
   return catalog
 }

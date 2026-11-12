@@ -20,6 +20,7 @@ import type { Plugin } from 'vite'
 const CONFIG_DIR = resolve('config/hsip')
 const OUT_DIR = resolve('src/data/generated')
 const PROGRAM_FILE = join(CONFIG_DIR, 'hsip_program.yaml')
+const RULES_FILE = join(CONFIG_DIR, 'hsip_rules.yaml')
 const MANIFEST_FILE = resolve('public/manifest.json')
 
 function fail(where: string, message: string): never {
@@ -50,6 +51,7 @@ type CountermeasureJson = {
   maintenanceCostRef: string
   subGroup: string
   additionalDocs: string | null
+  creditsAllCrashes: boolean
 }
 
 type CrashCostJson = {
@@ -58,8 +60,19 @@ type CrashCostJson = {
   dollarValue: number
 }
 
+// Work codes whose crediting rule is `match_all: true` in hsip_rules.yaml:
+// TxDOT lists their preventable crashes as "All", so every KAB crash at a site
+// counts toward the benefit. Read from the rules file so the flag can never
+// disagree with what the data build actually tagged.
+function matchAllWorkcodes(): Set<string> {
+  const doc = loadYaml(readFileSync(RULES_FILE, 'utf-8')) as { rules?: { id: unknown; match_all?: unknown }[] }
+  if (!doc || !Array.isArray(doc.rules)) fail('config/hsip/hsip_rules.yaml', '`rules` must be a list')
+  return new Set(doc.rules.filter((r) => r.match_all === true).map((r) => String(r.id)))
+}
+
 function buildCountermeasures(): CountermeasureJson[] {
   const rows = readCsv('countermeasures.csv')
+  const creditsAll = matchAllWorkcodes()
   const result: CountermeasureJson[] = []
   for (const row of rows) {
     const code = (row['Work Code'] ?? '').trim()
@@ -81,6 +94,7 @@ function buildCountermeasures(): CountermeasureJson[] {
       maintenanceCostRef: (row['Maintenance Cost'] ?? '').trim(),
       subGroup: (row['SubGroup'] ?? '').trim(),
       additionalDocs: (row['Additional Docs'] ?? '').trim() || null,
+      creditsAllCrashes: creditsAll.has(code),
     })
   }
   return result
@@ -205,6 +219,7 @@ export function csvConfigPlugin(): Plugin {
     join(CONFIG_DIR, 'countermeasures.csv'),
     join(CONFIG_DIR, 'crash_costs.csv'),
     PROGRAM_FILE,
+    RULES_FILE,
   ]
 
   return {

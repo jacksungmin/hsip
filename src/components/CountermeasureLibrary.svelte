@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { list } from '../data/countermeasureCatalog'
+  import { CREDITS_ALL_CRASHES_NOTE, list } from '../data/countermeasureCatalog'
   import { get as getCrashCost } from '../data/crashCostTable'
   import { projectState } from '../state/projectState.svelte'
   import type { SiteCrashProfile } from '../services/siteHelpers'
@@ -237,6 +237,9 @@
           </div>
           {#if cm.definition}
             <p class="mt-1 line-clamp-2 text-xs text-muted-foreground">{cm.definition}</p>
+          {/if}
+          {#if cm.creditsAllCrashes}
+            <p class="mt-1 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">{CREDITS_ALL_CRASHES_NOTE}</p>
           {/if}
           <div class="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
             <span><span class="font-medium">CRF</span> {cm.reductionFactor !== null ? Math.round(cm.reductionFactor * 100) + '%' : 'TBD'}</span>

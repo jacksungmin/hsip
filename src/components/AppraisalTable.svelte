@@ -1,5 +1,6 @@
 <script lang="ts">
   import { HSIP_PERIOD_LABEL } from '../data/hsipProgram'
+  import { CREDITS_ALL_CRASHES_NOTE, getByWorkcode } from '../data/countermeasureCatalog'
   import type { Alternative } from '../types'
   import { projectState } from '../state/projectState.svelte'
   import { compareBySII } from '../services/sitePlan'
@@ -145,6 +146,9 @@
                 <div class="min-w-0">
                   <div class="font-medium">{row.name}</div>
                   <div class="text-muted-foreground">WC {row.alt.workcode}{isBest ? ' · best' : ''}</div>
+                  {#if getByWorkcode(row.alt.workcode)?.creditsAllCrashes}
+                    <div class="text-amber-800" title={CREDITS_ALL_CRASHES_NOTE}>Counts all site crashes. Confirm fit.</div>
+                  {/if}
                 </div>
               </div>
             </td>

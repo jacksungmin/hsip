@@ -225,6 +225,9 @@ type Countermeasure = {
   maintenanceCostRef: string        // reference string for display (e.g. "$1,300 per approach")
   subGroup: string                  // library grouping (e.g. "Intersection - Signal")
   additionalDocs: string | null     // required documentation (e.g. "Overhead Intersection Layout")
+  creditsAllCrashes: boolean        // rule is match_all in hsip_rules.yaml (TxDOT PC criteria
+                                    // "All"): every KAB crash at a site counts, so the library,
+                                    // appraisal table and report ask the analyst to confirm fit
 }
 ```
 

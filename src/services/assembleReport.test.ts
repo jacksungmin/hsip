@@ -46,6 +46,7 @@ function makeCm(overrides: Partial<Countermeasure> = {}): Countermeasure {
     maintenanceCostRef: '0',
     subGroup: 'Crosscutting - Signs and Markings',
     additionalDocs: null,
+    creditsAllCrashes: false,
     ...overrides,
   }
 }

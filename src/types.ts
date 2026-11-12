@@ -136,6 +136,11 @@ export type Countermeasure = {
   maintenanceCostRef: string
   subGroup: string
   additionalDocs: string | null
+  // True when the work code's crediting rule counts every KAB crash at a site
+  // (TxDOT preventable crashes "All"; `match_all` in hsip_rules.yaml). Such a
+  // code's benefit can look large anywhere, so the UI and report ask the
+  // analyst to confirm the site's crash pattern fits it.
+  creditsAllCrashes: boolean
 }
 
 export type Alternative = {

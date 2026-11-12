@@ -7,6 +7,7 @@
   import hgacLogo from '../../config/assets/logo.png'
   import splashMarkdown from '../../config/splash.md?raw'
   import { HSIP_GUIDELINES, HSIP_PERIOD_LABEL } from '../data/hsipProgram'
+  import { PREVIEW_LABEL } from '../data/release'
   import ArrowRightIcon from '@lucide/svelte/icons/arrow-right'
   import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle'
   import CheckIcon from '@lucide/svelte/icons/check'
@@ -45,6 +46,11 @@
       <h2 class="text-lg leading-snug font-semibold tracking-tight">
         Welcome to {identity.fullName}
       </h2>
+      {#if PREVIEW_LABEL}
+        <p class="mt-1.5 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
+          <strong>{PREVIEW_LABEL}.</strong> This is a review version, not the official tool. Reports from it are for review only.
+        </p>
+      {/if}
     </div>
 
     <div class="px-6 pt-5 pb-4">

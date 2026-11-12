@@ -6,3 +6,8 @@
 // to be declared here — TypeScript has no way to know the substitution
 // happened.
 declare const __BUILD_SHA__: string
+
+interface ImportMetaEnv {
+  // Preview deployment label; see src/data/release.ts.
+  readonly VITE_PREVIEW_LABEL?: string
+}

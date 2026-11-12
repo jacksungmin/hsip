@@ -31,6 +31,7 @@
   import hgacLogo from '../config/assets/logo.png'
   import type { Component } from 'svelte'
   import ReportGenerationOverlay from './components/ReportGenerationOverlay.svelte'
+  import { PREVIEW_LABEL } from './data/release'
   import ErrorScreen from './components/ErrorScreen.svelte'
   import ErrorNotices from './components/ErrorNotices.svelte'
   import { errorState } from './state/errorState.svelte'
@@ -158,7 +159,12 @@
            hardcoding one agency's name beside a swappable logo. -->
       <img src={hgacLogo} alt="" class="size-9 shrink-0 rounded" />
       <div class="min-w-0">
-        <h1 class="text-sm leading-none font-semibold">{identity.appName}</h1>
+        <h1 class="text-sm leading-none font-semibold">
+          {identity.appName}
+          {#if PREVIEW_LABEL}
+            <span class="ml-1.5 rounded bg-amber-300 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-amber-950">{PREVIEW_LABEL}</span>
+          {/if}
+        </h1>
         <p class="mt-1 text-[11px] leading-none text-primary-foreground/70">{identity.subtitle}</p>
       </div>
     </div>

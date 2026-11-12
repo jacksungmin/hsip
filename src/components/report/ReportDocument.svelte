@@ -2,6 +2,7 @@
      Takes an assembled ReportPayload and renders the printable report.
      R4: cover, site sections, and appendices use assembled report data. -->
 <script lang="ts">
+  import { PREVIEW_LABEL } from '../../data/release'
   import type { ReportAssets, ReportPayload } from '../../types'
   import hgacLogo from '../../../config/assets/logo.png'
   import ReportAbout from './ReportAbout.svelte'
@@ -136,6 +137,9 @@
       <h3>Data &amp; Methods</h3>
       <table class="report-info-table">
         <tbody>
+          {#if PREVIEW_LABEL}
+            <tr><td class="report-label">Tool version</td><td><strong>{PREVIEW_LABEL}</strong>: review version, not for submission</td></tr>
+          {/if}
           <tr><td class="report-label">Guidelines</td><td>{payload.methods.guidelines}</td></tr>
           <tr><td class="report-label">SII crash period</td><td>{payload.methods.analysisRange} ({payload.methods.analysisYears} years)</td></tr>
           <tr><td class="report-label">Crash history available</td><td>{payload.methods.historyRange} (map and diagnosis only)</td></tr>

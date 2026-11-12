@@ -1,5 +1,20 @@
 name: Deploy to GitHub Pages
 
+# One Pages site, two apps:
+#   /<repo>/                   the official version, built from main
+#   /<repo>/<PREVIEW_PATH>/    a review preview, built from PREVIEW_REF and
+#                              labelled as a preview in the header, the splash
+#                              screen and every exported report
+#
+# Each app is built from its own ref with its own data files, so the two
+# cannot affect each other's numbers. Pushes to main run this workflow. After
+# pushing to the preview branch, run it by hand (Actions -> Deploy to GitHub
+# Pages -> Run workflow), because the github-pages environment accepts
+# deployments from main only.
+#
+# To retire the preview, set PREVIEW_REF to ''. To keep an old version for
+# reference after a switch-over, point PREVIEW_REF at a tag of it.
+
 on:
   push:
     branches: [main, master]
@@ -13,6 +28,11 @@ permissions:
 concurrency:
   group: pages
   cancel-in-progress: true
+
+env:
+  PREVIEW_REF: hsip-2027-update
+  PREVIEW_PATH: "2027"
+  PREVIEW_LABEL: 2027 HSIP update - preview
 
 jobs:
   build:
@@ -42,6 +62,35 @@ jobs:
         run: |
           npm ci
           npx vite build --base "/${GITHUB_REPOSITORY#*/}/"
+
+      - name: Check out preview
+        if: env.PREVIEW_REF != ''
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PREVIEW_REF }}
+          path: preview
+          lfs: false
+
+      - name: Cache preview LFS objects
+        if: env.PREVIEW_REF != ''
+        uses: actions/cache@v4
+        with:
+          path: preview/.git/lfs
+          key: lfs-preview-${{ hashFiles('preview/public/*.pmtiles', 'preview/public/*.db') }}
+          restore-keys: lfs-preview-
+
+      # Built into a subfolder of the official site. The base must be
+      # absolute: the SQLite worker resolves data URLs against BASE_URL from
+      # its own /assets/ location.
+      - name: Build preview
+        if: env.PREVIEW_REF != ''
+        working-directory: preview
+        run: |
+          git lfs pull
+          npm ci
+          VITE_PREVIEW_LABEL="$PREVIEW_LABEL" npx vite build \
+            --base "/${GITHUB_REPOSITORY#*/}/${PREVIEW_PATH}/" \
+            --outDir "../dist/${PREVIEW_PATH}" --emptyOutDir
 
       - uses: actions/upload-pages-artifact@v3
         with:

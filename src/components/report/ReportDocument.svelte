@@ -136,7 +136,9 @@
       <h3>Data &amp; Methods</h3>
       <table class="report-info-table">
         <tbody>
-          <tr><td class="report-label">Crash data</td><td>{payload.methods.dataRange} ({payload.methods.dataYears} years)</td></tr>
+          <tr><td class="report-label">Guidelines</td><td>{payload.methods.guidelines}</td></tr>
+          <tr><td class="report-label">SII crash period</td><td>{payload.methods.analysisRange} ({payload.methods.analysisYears} years)</td></tr>
+          <tr><td class="report-label">Crash history available</td><td>{payload.methods.historyRange} (map and diagnosis only)</td></tr>
           {#each payload.methods.crashCostTable as cost}
             <tr><td class="report-label">Crash cost ({cost.severity})</td><td>{formatCurrency(cost.dollarValue)}</td></tr>
           {/each}

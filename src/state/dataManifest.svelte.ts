@@ -5,11 +5,30 @@
 // consumers never hardcode data filenames.
 
 import {
+  checkFlagLayout,
   loadManifest,
   type ArtifactKey,
   type DataManifest,
   type OverlayTileset,
 } from '../services/loadManifest'
+import { HSIP_FIELDS } from '../data/hsipWorkcodes'
+import { EA_IDS } from '../data/emphasisAreas'
+import { HSIP_PERIOD_YEARS } from '../data/hsipProgram'
+
+// Checks the published crash data against what this app build expects. The
+// build plugin runs the same checks against public/manifest.json, but data
+// can be republished without rebuilding the app, so boot repeats them: a
+// mismatch here would not fail anywhere else, it would show wrong numbers.
+function checkAgainstApp(manifest: DataManifest): void {
+  checkFlagLayout(manifest.crashData, { hsipFields: HSIP_FIELDS, eaFields: EA_IDS })
+  const missing = HSIP_PERIOD_YEARS.filter((y) => !manifest.crashData.years.includes(y))
+  if (missing.length > 0) {
+    throw new Error(
+      `the SII analysis years ${missing.join(', ')} (config/hsip/hsip_program.yaml) are not in ` +
+        `the published crash data (${manifest.crashData.years.join(', ')})`,
+    )
+  }
+}
 
 const MANIFEST_URL = `${import.meta.env.BASE_URL}manifest.json`
 
@@ -31,6 +50,7 @@ export const dataManifest = {
     loadPromise = (async () => {
       const manifest = await loadManifest(MANIFEST_URL)
       console.log(`[manifest] buildId ${manifest.buildId}, built ${manifest.builtAt}`)
+      checkAgainstApp(manifest)
       current = manifest
       return manifest
     })()
@@ -48,16 +68,17 @@ export const dataManifest = {
     return `${import.meta.env.BASE_URL}${current.artifacts[key]}`
   },
 
-  // Exposure period for the SII benefit calculation: how many distinct years
-  // of crash data the published data set actually holds. Counted from the
-  // year list rather than its span, so a gap in the source export cannot
-  // inflate the denominator and understate crash rates.
+  // How many distinct years of crash history the published data set holds.
+  // Counted from the year list rather than its span, so a gap in the source
+  // export cannot misstate it. This is the full history diagnosis shows; the
+  // SII divides by the analysis period instead (HSIP_PERIOD_LENGTH in
+  // src/data/hsipProgram.ts), which is a subset of these years.
   get dataYears(): number {
     if (!current) throw new Error('data manifest not loaded yet')
     return current.crashData.years.length
   },
 
-  // Display label for the crash-data period, e.g. "2018-2024". Derived from
+  // Display label for the full crash history, e.g. "2018-2025". Derived from
   // the same list as dataYears so the two can never contradict each other in
   // a report.
   get dataRange(): string {

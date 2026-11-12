@@ -72,8 +72,10 @@ export type CrashRecord = {
 }
 
 // A crash reference held on a site part: id plus the severity needed
-// to recompute the site union without requerying unchanged parts.
-export type CrashRef = { id: string; severity: Severity }
+// to recompute the site union without requerying unchanged parts, and
+// the crash year, so planning can count the SII analysis period
+// (src/data/hsipProgram.ts) from stored state without a query.
+export type CrashRef = { id: string; severity: Severity; year: number }
 
 // One drawn geometry within a site, with its own buffer and crash set.
 // A site always has at least one part; SiteList enforces the minimum.
@@ -212,8 +214,16 @@ export type ReportPayload = {
   sites: ReportSiteBlock[]
   countermeasures: Countermeasure[]
   methods: {
-    dataYears: number
-    dataRange: string
+    // The SII analysis period (config/hsip/hsip_program.yaml): every crash
+    // count and benefit in the report covers these years only, and Y in the
+    // SII formula is analysisYears.
+    analysisYears: number
+    analysisRange: string // e.g. "2023-2025"
+    // The full crash history the published data holds, e.g. "2018-2025".
+    // Stated alongside the period so a reader can see why site counts here
+    // differ from the map.
+    historyRange: string
+    guidelines: string // e.g. "2027 TxDOT HSIP Guidelines"
     crashCostTable: CrashCostEntry[]
   }
   metadata: {

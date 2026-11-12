@@ -182,7 +182,8 @@
               "crashes": [
                 {
                   "id": "19710416",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2023
                 }
               ]
             },
@@ -353,11 +354,13 @@
               "crashes": [
                 {
                   "id": "16322395",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2018
                 },
                 {
                   "id": "20074691",
-                  "severity": "K"
+                  "severity": "K",
+                  "year": 2024
                 }
               ]
             },
@@ -560,7 +563,8 @@
               "crashes": [
                 {
                   "id": "18377634",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2021
                 }
               ]
             }
@@ -737,7 +741,8 @@
               "crashes": [
                 {
                   "id": "16966848",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2019
                 }
               ]
             },
@@ -1198,55 +1203,68 @@
               "crashes": [
                 {
                   "id": "16755105",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2018
                 },
                 {
                   "id": "18213128",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2021
                 },
                 {
                   "id": "18177701",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2021
                 },
                 {
                   "id": "17141552",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2019
                 },
                 {
                   "id": "18794676",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2022
                 },
                 {
                   "id": "18538325",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2021
                 },
                 {
                   "id": "18404312",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2021
                 },
                 {
                   "id": "18273865",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2021
                 },
                 {
                   "id": "17127118",
-                  "severity": "A"
+                  "severity": "A",
+                  "year": 2019
                 },
                 {
                   "id": "17617796",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2020
                 },
                 {
                   "id": "17153690",
-                  "severity": "A"
+                  "severity": "A",
+                  "year": 2019
                 },
                 {
                   "id": "20314326",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2024
                 },
                 {
                   "id": "20436929",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2024
                 }
               ]
             },
@@ -1403,11 +1421,13 @@
               "crashes": [
                 {
                   "id": "16322395",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2018
                 },
                 {
                   "id": "20074691",
-                  "severity": "K"
+                  "severity": "K",
+                  "year": 2024
                 }
               ]
             },
@@ -1716,51 +1736,63 @@
               "crashes": [
                 {
                   "id": "16511423",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2018
                 },
                 {
                   "id": "16589673",
-                  "severity": "A"
+                  "severity": "A",
+                  "year": 2018
                 },
                 {
                   "id": "18864920",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2022
                 },
                 {
                   "id": "16725851",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2018
                 },
                 {
                   "id": "16807912",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2018
                 },
                 {
                   "id": "16852382",
-                  "severity": "A"
+                  "severity": "A",
+                  "year": 2019
                 },
                 {
                   "id": "17905006",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2020
                 },
                 {
                   "id": "18927517",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2022
                 },
                 {
                   "id": "19624898",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2023
                 },
                 {
                   "id": "19677918",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2023
                 },
                 {
                   "id": "20033566",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2024
                 },
                 {
                   "id": "20270115",
-                  "severity": "A"
+                  "severity": "A",
+                  "year": 2024
                 }
               ]
             },
@@ -1917,7 +1949,8 @@
               "crashes": [
                 {
                   "id": "19710416",
-                  "severity": "B"
+                  "severity": "B",
+                  "year": 2023
                 }
               ]
             },

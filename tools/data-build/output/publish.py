@@ -29,7 +29,14 @@ from pathlib import Path
 # an older one fails loudly rather than reporting a missing artifact it was
 # never going to find — or, for v3, rather than falling back to a stale
 # hardcoded exposure period and silently scaling every benefit calculation.
-SCHEMA_VERSION = 3
+# Bumped to 4 when `crashData` started recording the flag layout
+# (`hsipFields`, `eaFields`): the order the crash build packed the
+# hsip_flags/ea_flags bit columns in. The app decodes each bit by position in
+# its own work-code and emphasis-area lists and refuses to start when they
+# differ from this, because a mismatch does not fail on its own: adding one
+# work code to countermeasures.csv shifts every later code's bit, and the app
+# would credit each countermeasure with a neighbour's crashes.
+SCHEMA_VERSION = 4
 MANIFEST_NAME = "manifest.json"
 
 # Artifact key -> stable (working) filename, for the artifacts app code names
@@ -110,6 +117,7 @@ def publish(
     touched: set[str],
     overlays: dict[str, dict | None] | None = None,
     crash_years: list[int] | None = None,
+    flag_fields: dict[str, list[str]] | None = None,
 ) -> dict:
     """Promote built artifacts to hashed names, write manifest, prune.
 
@@ -123,6 +131,9 @@ def publish(
     `crash_years` is every distinct crash year the crash build ingested, or
     None when this run did not rebuild crashes — in which case the previous
     manifest's value carries forward, same as an untouched artifact.
+    `flag_fields` is the flag layout that crash build packed, as
+    {"hsip": [...], "ea": [...]} in bit order; given exactly when
+    `crash_years` is.
 
     build-config is the sole authority on which overlays exist, so an overlay
     dropped from it loses its manifest entry and has its files pruned on the
@@ -176,7 +187,7 @@ def publish(
         "builtAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "artifacts": {k: entries[k] for k in sorted(entries)},
         "overlays": {k: overlay_entries[k] for k in sorted(overlay_entries)},
-        "crashData": _resolve_crash_data(crash_years, prev.get("crashData")),
+        "crashData": _resolve_crash_data(crash_years, flag_fields, prev.get("crashData")),
     }
 
     if _same_except_built_at(prev, manifest):
@@ -195,7 +206,9 @@ def publish(
 
 
 def _resolve_crash_data(
-    crash_years: list[int] | None, prev_entry: dict | None
+    crash_years: list[int] | None,
+    flag_fields: dict[str, list[str]] | None,
+    prev_entry: dict | None,
 ) -> dict:
     """Settle the crash-data provenance block: use what this run ingested, else
     carry the previous manifest's forward.
@@ -212,8 +225,18 @@ def _resolve_crash_data(
                 "previous manifest has no `crashData`. Run `python build.py --only "
                 "crashes` once (a pre-v3 manifest predates this section)."
             )
+        if not prev_entry.get("hsipFields") or not prev_entry.get("eaFields"):
+            raise ValueError(
+                "the previous manifest does not record the crash flag layout "
+                "(`hsipFields`/`eaFields`, added in manifest v4), so carrying it "
+                "forward would publish a database the app cannot check. Run "
+                "`python build.py --only crashes` once."
+            )
         print(f"  crashData carried forward: {len(prev_entry['years'])} years")
         return prev_entry
+
+    if not flag_fields or not flag_fields.get("hsip") or not flag_fields.get("ea"):
+        raise ValueError("crash build did not report its flag layout; refusing to publish")
 
     if not crash_years:
         raise ValueError("crash build produced no crash years; refusing to publish")
@@ -226,7 +249,12 @@ def _resolve_crash_data(
             f"by {len(crash_years)} (years present), not {span} (the span)."
         )
     print(f"  crashData: {len(crash_years)} years, {crash_years[0]}-{crash_years[-1]}")
-    return {"years": crash_years}
+    print(f"  flag layout: {len(flag_fields['hsip'])} HSIP, {len(flag_fields['ea'])} EA")
+    return {
+        "years": crash_years,
+        "hsipFields": list(flag_fields["hsip"]),
+        "eaFields": list(flag_fields["ea"]),
+    }
 
 
 def _resolve(

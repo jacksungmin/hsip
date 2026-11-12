@@ -3,6 +3,7 @@
   import { get as getCrashCost } from '../data/crashCostTable'
   import { projectState } from '../state/projectState.svelte'
   import type { SiteCrashProfile } from '../services/siteHelpers'
+  import { HSIP_PERIOD_LABEL } from '../data/hsipProgram'
   import type { Countermeasure } from '../types'
   import Plus from '@lucide/svelte/icons/plus'
   import Check from '@lucide/svelte/icons/check'
@@ -243,7 +244,12 @@
             {#if cm.facilitySubset}
               <span><span class="font-medium">Facility</span> {cm.facilitySubset}</span>
             {/if}
-            <span class="ml-auto text-right"><span class="font-medium">Benefit from Crash Reduction</span> <span class="text-green-600">{benefit !== null ? '~' + formatMoney(benefit) + '/yr' : '—'}</span></span>
+            {#if crashProfile && cm.reductionFactor !== null && !crashProfile.byWorkcode[cm.workcode]}
+              <!-- A bare $0 reads like a calculation fault; say why instead. -->
+              <span class="ml-auto text-right"><span class="font-medium">Benefit from Crash Reduction</span> <span>No preventable KAB crashes in {HSIP_PERIOD_LABEL}</span></span>
+            {:else}
+              <span class="ml-auto text-right"><span class="font-medium">Benefit from Crash Reduction</span> <span class="text-green-600">{benefit !== null ? '~' + formatMoney(benefit) + '/yr' : '—'}</span></span>
+            {/if}
           </div>
           {#if cm.emphasisAreas.length > 0}
             <div class="mt-1.5 flex flex-wrap gap-1">

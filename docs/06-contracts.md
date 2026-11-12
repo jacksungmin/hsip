@@ -291,7 +291,7 @@ A site stores crash *ids*, not whole crash records. The records live
 in `CrashStore` and are fetched when something needs them.
 
 ```ts
-type CrashRef = { id: string; severity: Severity }
+type CrashRef = { id: string; severity: Severity; year: number }
 
 type SitePart = {
   id: string
@@ -299,7 +299,9 @@ type SitePart = {
   drawnGeometry: LineString | Point   // LineString for roadway, Point for intersection
   bufferFeet: number
   bufferedGeometry: Polygon           // derived from drawnGeometry + bufferFeet
-  crashes: CrashRef[]                 // crashes within this part's buffer, id + severity
+  crashes: CrashRef[]                 // crashes within this part's buffer: id, severity,
+                                      // and year, so planning can count the SII analysis
+                                      // period from stored state without a query
 }
 
 type Site = {
@@ -364,8 +366,10 @@ type ReportPayload = {
   sites: ReportSiteBlock[]
   countermeasures: Countermeasure[]                  // unique across all site alternatives (Appendix A)
   methods: {
-    dataYears: number
-    dataRange: string                               // display string, e.g. "2018-2024"
+    analysisYears: number                           // Y: years in the SII analysis period
+    analysisRange: string                           // display string, e.g. "2023-2025"
+    historyRange: string                            // full crash history in the data, e.g. "2018-2025"
+    guidelines: string                              // e.g. "2027 TxDOT HSIP Guidelines"
     crashCostTable: CrashCostEntry[]
   }
   metadata: {
@@ -456,8 +460,10 @@ type DataManifest = {
                                            // build declares as an overlay
   crashData: {
     years: number[]                     // every distinct crash year in the published data,
-                                        // ascending; the app derives the exposure-period
-                                        // count and the display range from it
+                                        // ascending; the app derives the history's
+                                        // count and display range from it
+    hsipFields: string[]                // flag layout: the order the crash build packed
+    eaFields: string[]                  // the hsip_flags / ea_flags bits in (v4)
   }
 }
 ```
@@ -489,6 +495,30 @@ A build that does not rebuild crashes carries this section forward
 from the previous manifest, exactly as it carries forward the
 artifacts it did not touch. A build that can do neither fails, since
 there is no safe value to invent.
+
+**The SII uses a subset of these years.** TxDOT computes the SII from
+the most recent three years of crash data, so planning (the site crash
+history, every countermeasure benefit, and the report) counts only the
+analysis period set in `config/hsip/hsip_program.yaml`
+(`analysisYears`, e.g. `[2023, 2024, 2025]`) and divides by its
+length. Diagnosis and the map keep the full history listed here. The
+period is a setting because it changes with each call for projects
+and a newly published year may still be preliminary; it is listed
+explicitly rather than derived as "the latest three". The app build
+fails if a period year is missing from `years`, and startup checks it
+again (`src/data/hsipProgram.ts`, `dataManifest.load`).
+
+**Why the flag layout lives here (v4).** Each crash's work-code and
+emphasis-area flags are stored as packed bits, and the app reads bit
+*i* as the *i*-th entry of its own list (`HSIP_FIELDS`, from
+`countermeasures.csv`; `EA_IDS`). A list that differs from the one the
+database was built with does not fail by itself: adding one work code
+shifts every later code's bit, and each countermeasure is credited
+with a neighbour's crashes. So the build records the exact lists it
+packed, and both the app build (`vite-plugin-csv-config`) and startup
+(`checkFlagLayout`) refuse to run unless they match the app's lists
+exactly, in order. Carrying `crashData` forward from a manifest
+without the layout is refused for the same reason.
 
 **Why `artifacts` and `overlays` are separate.** `artifacts` holds
 the files the app's own code asks for by name, so the list is fixed
@@ -1122,11 +1152,15 @@ Shapes and crash lookups:
   redrawn shape and requeries at the buffer already set. The part
   keeps its id and name.
 - **`querySiteCrashes(site)`** — the full crash records for a site,
-  for the views that need the emphasis area and workcode columns.
-  Looks up the stored `crashIds` through
+  all years, for the diagnosis views that need the emphasis area and
+  workcode columns. Looks up the stored `crashIds` through
   `sqliteClient.queryByIds`, which is consistent with the site's
   own stored counts by construction. The spatial query only ever
   runs when a shape changes.
+- **`queryHsipPeriodCrashes(site)`** — the same records limited to
+  the SII analysis period, for everything planning shows: the crash
+  history panel, crash profiles, and the report. Selects ids by the
+  stored refs' years, then filters the records by their own dates.
 
 Reading derived figures, in neighbouring modules:
 
@@ -1135,8 +1169,14 @@ Reading derived figures, in neighbouring modules:
   severity. It touches no files or network, which is what lets
   `siteList` use it without the two modules importing each other in
   a circle. Tested directly.
+- **`hsipPeriodCrashes(site)`** (`crashUnion.ts`) — the deduped
+  crash refs inside the SII analysis period, with their severity
+  tally. Synchronous, for the site cards and the plan summary.
 - **`siteCrashProfile(site)`** (`siteCrashProfile.ts`) — a site's
-  totals, plus K/A/B counts per workcode. Not stored on the site.
+  totals, plus K/A/B counts per workcode, over the SII analysis period,
+  with `dataYears` set to the period's length. Every SII reads its
+  counts and its exposure period from here, so the two always describe
+  the same crashes. Not stored on the site.
 - **`siteBreakdownByEA(site)`** — the emphasis area breakdown for
   one site's crashes.
 
@@ -1160,7 +1200,7 @@ function calculateSII(input: {
   alternative:      Alternative
   countermeasure:   Countermeasure
   crashCounts:      SeverityTriplet  // K/A/B crashes at site
-  dataYears:        number           // Y: years of crash data
+  dataYears:        number           // Y: years in the SII analysis period
   growthRatePercent: number          // from Site, e.g. 2 for 2%/yr
   crashCostTable:   CrashCostEntry[]
 }): {

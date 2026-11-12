@@ -30,7 +30,7 @@ function makePart(
     },
     bufferFeet: 150,
     bufferedGeometry: square(west, south, east, north),
-    crashes: crashIds.map((crashId) => ({ id: crashId, severity: 'B' })),
+    crashes: crashIds.map((crashId) => ({ id: crashId, severity: 'B', year: 2024 })),
   }
 }
 
@@ -66,7 +66,13 @@ function makePayload(sites: Site[]): ReportPayload {
       alternatives: [],
     })),
     countermeasures: [],
-    methods: { dataYears: 7, dataRange: '2018-2024', crashCostTable: [] },
+    methods: {
+      analysisYears: 3,
+      analysisRange: '2023-2025',
+      historyRange: '2018-2025',
+      guidelines: '2027 TxDOT HSIP Guidelines',
+      crashCostTable: [],
+    },
     metadata: { buildId: 'test', appVersion: '0.0.0' },
   }
 }

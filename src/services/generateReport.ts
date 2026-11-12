@@ -10,7 +10,8 @@ import { projectState } from '../state/projectState.svelte'
 import { dataManifest } from '../state/dataManifest.svelte'
 import { list as listCatalog } from '../data/countermeasureCatalog'
 import { all as allCrashCosts } from '../data/crashCostTable'
-import { querySiteCrashes } from './siteHelpers'
+import { queryHsipPeriodCrashes } from './siteHelpers'
+import { HSIP_GUIDELINES, HSIP_PERIOD_LABEL, HSIP_PERIOD_LENGTH } from '../data/hsipProgram'
 import { assembleReport } from './assembleReport'
 import { captureReportMaps, createReportMapJobs } from './captureMaps'
 import { version as appVersion } from '../../package.json'
@@ -36,7 +37,9 @@ export async function prepareReportDataFromStores(): Promise<PreparedReportData>
   const crashesBySite: Record<string, CrashRecord[]> = {}
   await Promise.all(
     includedSites.map(async (site) => {
-      crashesBySite[site.id] = await querySiteCrashes(site)
+      // SII analysis period only: the report's counts, benefits and maps
+      // all describe the same crashes the planning screens showed.
+      crashesBySite[site.id] = await queryHsipPeriodCrashes(site)
     }),
   )
 
@@ -61,8 +64,10 @@ export async function prepareReportDataFromStores(): Promise<PreparedReportData>
     countermeasureCatalog: listCatalog(),
     crashCostTable: allCrashCosts(),
     projectInfo: projectInfoState.value,
-    dataYears: dataManifest.dataYears,
-    dataRange: dataManifest.dataRange,
+    analysisYears: HSIP_PERIOD_LENGTH,
+    analysisRange: HSIP_PERIOD_LABEL,
+    historyRange: dataManifest.dataRange,
+    guidelines: HSIP_GUIDELINES,
     buildId: manifest.buildId,
     appVersion,
   })

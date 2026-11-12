@@ -3,10 +3,12 @@
      the numbers rest on. Rendered by src/components/report/ReportAbout.svelte.
 
      Editable prose. Markdown; headings, bold, italics, and lists all work.
-     Three tokens are substituted at render time from the report payload:
-       {{dataYears}}  - number of crash-history years (e.g. 5)
-       {{yearPlural}} - "" or "s", to agree with {{dataYears}}
-       {{dataRange}}  - crash-history date range (e.g. "2019-2023")
+     These tokens are substituted at render time from the report payload:
+       {{analysisYears}} - number of years in the SII analysis period (e.g. 3)
+       {{yearPlural}}    - "" or "s", to agree with {{analysisYears}}
+       {{analysisRange}} - the SII analysis period (e.g. "2023-2025")
+       {{historyRange}}  - the full crash history in the data (e.g. "2018-2025")
+       {{guidelines}}    - the guidelines edition (e.g. "2027 TxDOT HSIP Guidelines")
 
      Wording is drawn from the Kimley-Horn "HSIP Tool - Benefit-Cost Analysis
      Methodology" memo (Introduction) and the tool scope framing KH asked us to
@@ -34,9 +36,11 @@ countermeasure selection are outside its scope and are supported by other tools
 and by engineering judgment.
 
 **Basis.** Benefit calculations follow TxDOT's Highway Safety Improvement
-Program (HSIP) methodology. Crash history is {{dataYears}}
-year{{yearPlural}} of KAB crashes ({{dataRange}}) from TxDOT CRIS as processed
-for the H-GAC Safety Action Plan; HSIP calculations typically use three years.
+Program (HSIP) methodology, per the {{guidelines}}. Crash counts and benefits
+use {{analysisYears}} year{{yearPlural}} of KAB crashes ({{analysisRange}}), the
+HSIP analysis period, from TxDOT CRIS as processed for the H-GAC Safety Action
+Plan. The tool's map holds a longer crash history ({{historyRange}}) for
+diagnosis; it does not enter these calculations.
 Crash reduction factors, service lives, and maintenance costs are
 TxDOT-prescribed values; project costs are entered by the analyst. Formulas and
 the values used appear in Appendix B.

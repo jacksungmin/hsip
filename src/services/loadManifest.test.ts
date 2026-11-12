@@ -5,10 +5,16 @@
 // schema evolution); a schemaVersion mismatch is a hard error.
 
 import { describe, expect, it } from 'vitest'
-import { parseManifest } from './loadManifest'
+import { checkFlagLayout, parseManifest } from './loadManifest'
+
+const crashData = {
+  years: [2018, 2019, 2020, 2021, 2022, 2023, 2024],
+  hsipFields: ['HSIP_101', 'HSIP_107'],
+  eaFields: ['EA_01_Speed'],
+}
 
 const valid = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   buildId: 'afde19eb',
   builtAt: '2026-07-06T19:21:46+00:00',
   artifacts: {
@@ -23,7 +29,7 @@ const valid = {
       fields: ['f_system', 'county_id'],
     },
   },
-  crashData: { years: [2018, 2019, 2020, 2021, 2022, 2023, 2024] },
+  crashData,
 }
 
 describe('parseManifest', () => {
@@ -52,7 +58,7 @@ describe('parseManifest', () => {
   it('rejects non-object input and a missing artifacts map', () => {
     expect(() => parseManifest(null)).toThrow(/not an object/)
     expect(() => parseManifest('<!doctype html>')).toThrow(/not an object/)
-    expect(() => parseManifest({ schemaVersion: 3, buildId: 'x' })).toThrow(/artifacts/)
+    expect(() => parseManifest({ schemaVersion: 4, buildId: 'x' })).toThrow(/artifacts/)
   })
 
   // Unlike overlays, this section is required and strictly checked: the year
@@ -62,15 +68,33 @@ describe('parseManifest', () => {
   it('rejects a missing or empty crashData section', () => {
     const { crashData: _none, ...withoutCrashData } = valid
     expect(() => parseManifest(withoutCrashData)).toThrow(/crashData/)
-    expect(() => parseManifest({ ...valid, crashData: { years: [] } })).toThrow(/years/)
-    expect(() => parseManifest({ ...valid, crashData: { years: [2018, '2019'] } })).toThrow(
+    expect(() => parseManifest({ ...valid, crashData: { ...crashData, years: [] } })).toThrow(/years/)
+    expect(() => parseManifest({ ...valid, crashData: { ...crashData, years: [2018, '2019'] } })).toThrow(
       /integers/,
     )
   })
 
   it('sorts crash years ascending, so count and range never depend on build order', () => {
-    const parsed = parseManifest({ ...valid, crashData: { years: [2020, 2018, 2019] } })
+    const parsed = parseManifest({ ...valid, crashData: { ...crashData, years: [2020, 2018, 2019] } })
     expect(parsed.crashData.years).toEqual([2018, 2019, 2020])
+  })
+
+  // v4: the flag layout is required, because without it the app has no way to
+  // tell whether the database's work-code bits line up with its own list.
+  it('requires the flag layout the crash build packed', () => {
+    const { hsipFields: _h, ...noHsip } = crashData
+    expect(() => parseManifest({ ...valid, crashData: noHsip })).toThrow(/hsipFields/)
+    expect(() => parseManifest({ ...valid, crashData: { ...crashData, eaFields: [] } })).toThrow(/eaFields/)
+    expect(() => parseManifest({ ...valid, crashData: { ...crashData, hsipFields: ['HSIP_101', 7] } })).toThrow(
+      /hsipFields/,
+    )
+    const parsed = parseManifest(valid)
+    expect(parsed.crashData.hsipFields).toEqual(['HSIP_101', 'HSIP_107'])
+    expect(parsed.crashData.eaFields).toEqual(['EA_01_Speed'])
+  })
+
+  it('rejects a v3 manifest, which predates the flag layout', () => {
+    expect(() => parseManifest({ ...valid, schemaVersion: 3 })).toThrow(/schemaVersion/)
   })
 
   // Overlay tilesets are open-ended on purpose: the data build decides which
@@ -95,5 +119,35 @@ describe('parseManifest', () => {
       overlays: { hin: { file: 'hin-1234abcd.pmtiles', sourceLayer: 'hin' } },
     })
     expect(parsed.overlays.hin.fields).toEqual([])
+  })
+})
+
+// The guard against silently mis-decoded work-code flags: each crash's flags
+// are bits read by position, so the app's lists must equal the build's.
+describe('checkFlagLayout', () => {
+  const app = { hsipFields: ['HSIP_101', 'HSIP_107'], eaFields: ['EA_01_Speed'] }
+
+  it('accepts identical lists', () => {
+    expect(() => checkFlagLayout(crashData, app)).not.toThrow()
+  })
+
+  it('rejects a work code inserted mid-list, naming where the lists part', () => {
+    const shifted = { ...app, hsipFields: ['HSIP_101', 'HSIP_105', 'HSIP_107'] }
+    expect(() => checkFlagLayout(crashData, shifted)).toThrow(
+      /work-code list.*position 2: data HSIP_107, app HSIP_105/,
+    )
+  })
+
+  it('rejects a list that only differs in length or order', () => {
+    expect(() => checkFlagLayout(crashData, { ...app, hsipFields: ['HSIP_101'] })).toThrow(/position 2/)
+    expect(() => checkFlagLayout(crashData, { ...app, hsipFields: ['HSIP_107', 'HSIP_101'] })).toThrow(
+      /position 1/,
+    )
+  })
+
+  it('checks the emphasis-area list too', () => {
+    expect(() => checkFlagLayout(crashData, { ...app, eaFields: ['EA_02_Impaired'] })).toThrow(
+      /emphasis-area list/,
+    )
   })
 })

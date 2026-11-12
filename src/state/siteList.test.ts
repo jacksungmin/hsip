@@ -52,15 +52,15 @@ beforeEach(() => {
 
 describe('siteList part ops', () => {
   it('add() and get() round-trip a single-part site', () => {
-    siteList.add(makeSite('s1', [makePart('p1', [{ id: 'c1', severity: 'K' }])]))
+    siteList.add(makeSite('s1', [makePart('p1', [{ id: 'c1', severity: 'K', year: 2024 }])]))
     expect(getSite('s1').parts).toHaveLength(1)
     expect(getSite('s1').parts[0].id).toBe('p1')
   })
 
   it('addPart() appends the part and recomputes the deduped union', () => {
-    siteList.add(makeSite('s1', [makePart('p1', [{ id: 'c1', severity: 'K' }, { id: 'c2', severity: 'B' }])]))
+    siteList.add(makeSite('s1', [makePart('p1', [{ id: 'c1', severity: 'K', year: 2024 }, { id: 'c2', severity: 'B', year: 2024 }])]))
     // c2 also falls in the new part's buffer: overlap must count once.
-    siteList.addPart('s1', makePart('p2', [{ id: 'c2', severity: 'B' }, { id: 'c3', severity: 'A' }]))
+    siteList.addPart('s1', makePart('p2', [{ id: 'c2', severity: 'B', year: 2024 }, { id: 'c3', severity: 'A', year: 2024 }]))
     const s = getSite('s1')
     expect(s.parts.map((p) => p.id)).toEqual(['p1', 'p2'])
     expect(s.crashIds).toEqual(['c1', 'c2', 'c3'])
@@ -69,8 +69,8 @@ describe('siteList part ops', () => {
 
   it('removePart() drops the part and recomputes the union from remaining parts', () => {
     siteList.add(makeSite('s1', [
-      makePart('p1', [{ id: 'c1', severity: 'K' }]),
-      makePart('p2', [{ id: 'c2', severity: 'A' }]),
+      makePart('p1', [{ id: 'c1', severity: 'K', year: 2024 }]),
+      makePart('p2', [{ id: 'c2', severity: 'A', year: 2024 }]),
     ]))
     siteList.removePart('s1', 'p2')
     const s = getSite('s1')
@@ -81,8 +81,8 @@ describe('siteList part ops', () => {
 
   it('removePart() keeps crashes still covered by another part', () => {
     siteList.add(makeSite('s1', [
-      makePart('p1', [{ id: 'c1', severity: 'K' }, { id: 'c2', severity: 'B' }]),
-      makePart('p2', [{ id: 'c2', severity: 'B' }]),
+      makePart('p1', [{ id: 'c1', severity: 'K', year: 2024 }, { id: 'c2', severity: 'B', year: 2024 }]),
+      makePart('p2', [{ id: 'c2', severity: 'B', year: 2024 }]),
     ]))
     siteList.removePart('s1', 'p2')
     const s = getSite('s1')
@@ -91,7 +91,7 @@ describe('siteList part ops', () => {
   })
 
   it('removePart() refuses to remove the last part (min-1 invariant)', () => {
-    siteList.add(makeSite('s1', [makePart('p1', [{ id: 'c1', severity: 'K' }])]))
+    siteList.add(makeSite('s1', [makePart('p1', [{ id: 'c1', severity: 'K', year: 2024 }])]))
     siteList.removePart('s1', 'p1')
     const s = getSite('s1')
     expect(s.parts).toHaveLength(1)
@@ -100,8 +100,8 @@ describe('siteList part ops', () => {
 
   it('removePart() with an unknown partId leaves the site untouched', () => {
     siteList.add(makeSite('s1', [
-      makePart('p1', [{ id: 'c1', severity: 'K' }]),
-      makePart('p2', [{ id: 'c2', severity: 'A' }]),
+      makePart('p1', [{ id: 'c1', severity: 'K', year: 2024 }]),
+      makePart('p2', [{ id: 'c2', severity: 'A', year: 2024 }]),
     ]))
     const before = getSite('s1')
     siteList.removePart('s1', 'nope')
@@ -110,8 +110,8 @@ describe('siteList part ops', () => {
 
   it('updatePartBuffer() updates the target part and recomputes the union, other parts untouched', () => {
     siteList.add(makeSite('s1', [
-      makePart('p1', [{ id: 'c1', severity: 'K' }]),
-      makePart('p2', [{ id: 'c2', severity: 'A' }]),
+      makePart('p1', [{ id: 'c1', severity: 'K', year: 2024 }]),
+      makePart('p2', [{ id: 'c2', severity: 'A', year: 2024 }]),
     ]))
     const wider: Polygon = {
       type: 'Polygon',
@@ -121,7 +121,7 @@ describe('siteList part ops', () => {
       drawnGeometry: point,
       bufferFeet: 300,
       bufferedGeometry: wider,
-      crashes: [{ id: 'c1', severity: 'K' }, { id: 'c3', severity: 'B' }],
+      crashes: [{ id: 'c1', severity: 'K', year: 2024 }, { id: 'c3', severity: 'B', year: 2024 }],
     })
     const s = getSite('s1')
     const p1 = s.parts.find((p) => p.id === 'p1')!
@@ -134,8 +134,8 @@ describe('siteList part ops', () => {
 
   it('updatePartBuffer() replaces drawn geometry (redraw), keeping id and name', () => {
     siteList.add(makeSite('s1', [
-      makePart('p1', [{ id: 'c1', severity: 'K' }]),
-      makePart('p2', [{ id: 'c2', severity: 'A' }]),
+      makePart('p1', [{ id: 'c1', severity: 'K', year: 2024 }]),
+      makePart('p2', [{ id: 'c2', severity: 'A', year: 2024 }]),
     ]))
     const moved: Point = { type: 'Point', coordinates: [3, 3] }
     const movedBuffer: Polygon = {
@@ -146,7 +146,7 @@ describe('siteList part ops', () => {
       drawnGeometry: moved,
       bufferFeet: 150,
       bufferedGeometry: movedBuffer,
-      crashes: [{ id: 'c4', severity: 'B' }],
+      crashes: [{ id: 'c4', severity: 'B', year: 2024 }],
     })
     const s = getSite('s1')
     const p1 = s.parts.find((p) => p.id === 'p1')!
@@ -157,7 +157,7 @@ describe('siteList part ops', () => {
   })
 
   it('updatePart() renames a part without touching crash fields', () => {
-    siteList.add(makeSite('s1', [makePart('p1', [{ id: 'c1', severity: 'K' }])]))
+    siteList.add(makeSite('s1', [makePart('p1', [{ id: 'c1', severity: 'K', year: 2024 }])]))
     const before = getSite('s1')
     siteList.updatePart('s1', 'p1', { name: 'Main St leg' })
     const s = getSite('s1')

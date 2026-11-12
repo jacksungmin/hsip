@@ -3,15 +3,15 @@ import turfBuffer from '@turf/buffer'
 import { queryByIds, queryByPolygon } from './db/sqliteClient'
 import type { BreakdownResult, CrashRecord, CrashRef, Site, SitePart } from '../types'
 import type { PartBufferFields } from '../state/siteList.svelte'
-import { dedupeCrashUnion } from './crashUnion'
+import { dedupeCrashUnion, hsipPeriodCrashes } from './crashUnion'
 import { EA_IDS } from '../data/emphasisAreas'
 import { buildSiteCrashProfile, type SiteCrashProfile } from './siteCrashProfile'
-import { dataManifest } from '../state/dataManifest.svelte'
+import { crashYear, HSIP_PERIOD_LENGTH, inHsipPeriod } from '../data/hsipProgram'
 
 export type { SiteCrashProfile } from './siteCrashProfile'
 
 function toCrashRefs(rows: CrashRecord[]): CrashRef[] {
-  return rows.map((r) => ({ id: r.id, severity: r.severity }))
+  return rows.map((r) => ({ id: r.id, severity: r.severity, year: crashYear(r.date) }))
 }
 
 function bufferGeometry(drawnGeometry: LineString | Point, bufferFeet: number): Polygon {
@@ -180,19 +180,34 @@ export function replacePartGeometry(part: SitePart, drawnGeometry: LineString | 
   return computePartFields(drawnGeometry, part.bufferFeet)
 }
 
-// Crash records for a whole site, for views needing full records
-// (EA/HSIP flags), which sites deliberately don't store: the planning
-// panel, siteCrashProfile, and siteBreakdownByEA. Resolves the stored
-// crashIds by id — the reference-resolution read the Site entity
-// prescribes. Spatial queries happen only when geometry changes
-// (createPart, requeryPartBuffer).
+// Crash records for a whole site, all years, for views needing full
+// records (EA/HSIP flags), which sites deliberately don't store: the
+// diagnosis breakdown (siteBreakdownByEA). Resolves the stored crashIds
+// by id — the reference-resolution read the Site entity prescribes.
+// Spatial queries happen only when geometry changes (createPart,
+// requeryPartBuffer).
 export function querySiteCrashes(site: Site): Promise<CrashRecord[]> {
   return queryByIds(site.crashIds)
 }
 
+// The same read limited to the SII analysis period, for everything
+// planning shows: the crash history panel, crash profiles, and the
+// report. The period is selected from the stored refs' years before the
+// query, and the records are filtered again by their own dates, so a
+// stale ref cannot pull a crash from outside the period into an SII.
+export async function queryHsipPeriodCrashes(site: Site): Promise<CrashRecord[]> {
+  const ids = hsipPeriodCrashes(site).refs.map((r) => r.id)
+  const records = await queryByIds(ids)
+  const inPeriod = new Set(ids)
+  return records.filter((r) => inPeriod.has(r.id) && inHsipPeriod(crashYear(r.date)))
+}
+
+// Every SII reads its crash counts and its exposure period from here, so
+// the two always describe the same crashes: period crashes, divided by
+// the period's length.
 export async function siteCrashProfile(site: Site): Promise<SiteCrashProfile> {
-  const crashes = await querySiteCrashes(site)
-  return buildSiteCrashProfile(crashes, dataManifest.dataYears)
+  const crashes = await queryHsipPeriodCrashes(site)
+  return buildSiteCrashProfile(crashes, HSIP_PERIOD_LENGTH)
 }
 
 export async function siteBreakdownByEA(site: Site): Promise<BreakdownResult> {

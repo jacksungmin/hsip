@@ -109,8 +109,10 @@ function makeInput(overrides: Partial<AssembleReportInput> = {}): AssembleReport
     countermeasureCatalog: [cm],
     crashCostTable: defaultCosts,
     projectInfo: defaultProjectInfo,
-    dataYears: 7,
-    dataRange: '2018-2024',
+    analysisYears: 3,
+    analysisRange: '2023-2025',
+    historyRange: '2018-2025',
+    guidelines: '2027 TxDOT HSIP Guidelines',
     buildId: 'abc123',
     appVersion: '0.1.0',
     ...overrides,
@@ -189,8 +191,10 @@ describe('assembleReport', () => {
 
   it('includes methods and metadata', () => {
     const result = assembleReport(makeInput())
-    expect(result.methods.dataYears).toBe(7)
-    expect(result.methods.dataRange).toBe('2018-2024')
+    expect(result.methods.analysisYears).toBe(3)
+    expect(result.methods.analysisRange).toBe('2023-2025')
+    expect(result.methods.historyRange).toBe('2018-2025')
+    expect(result.methods.guidelines).toBe('2027 TxDOT HSIP Guidelines')
     expect(result.methods.crashCostTable).toEqual(defaultCosts)
     expect(result.metadata.buildId).toBe('abc123')
     expect(result.metadata.appVersion).toBe('0.1.0')

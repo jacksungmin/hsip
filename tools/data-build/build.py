@@ -279,7 +279,10 @@ def main():
     # None when crashes were not rebuilt, which tells publish to carry the
     # previous manifest's crash-data block forward.
     years = crash_years(crash_gdf) if crash_gdf is not None else None
-    publish(output_dir, touched, overlays, years)
+    # The bit order build_crash_table packed, recorded so the app can refuse a
+    # database whose flag layout does not match its own work-code list.
+    flag_fields = {"hsip": hsip_fields, "ea": ea_ids} if crash_gdf is not None else None
+    publish(output_dir, touched, overlays, years, flag_fields)
 
     elapsed = perf_counter() - t0
     print(f"\nDone in {elapsed:.1f}s")

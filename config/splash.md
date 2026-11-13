@@ -13,19 +13,14 @@
      follow that file when the next call for projects updates it:
        {{guidelines}}    - e.g. "2027 TxDOT HSIP Guidelines"
        {{analysisRange}} - the SII analysis period, e.g. "2023-2025"
-     The "What's new" paragraph describes one release; rewrite it (or drop
-     it) at the next update. -->
+     A "What's new" paragraph was drafted for the 2027 update and dropped on
+     Kimley-Horn's advice (2026-11-13): few current users would be surprised
+     by the change, and the one-line "Updated for" note is enough. -->
 
 Developed as part of the H-GAC Safety Action Plan, this application is designed
 to make applying TxDOT's Highway Safety Improvement Program (HSIP) Safety
 Investment Index methodology more streamlined and interactive. **Updated for
 the {{guidelines}}.**
-
-**What's new:** updated crash costs, revised countermeasures and preventable
-crash criteria, and new work codes for centerline buffers and raised
-crosswalks. As TxDOT specifies, benefits now use the most recent three years of
-crash data ({{analysisRange}}); the map keeps the full crash history for
-diagnosis. Results will differ from earlier versions of this tool.
 
 The application is designed with two phases in mind.
 **Crash Diagnosis** — explore crash trends for a selected region, then mark

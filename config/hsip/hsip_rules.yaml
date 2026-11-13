@@ -990,13 +990,16 @@ rules:
 # 33). This follows the guidelines' text (p. 65 and Appendix E), which puts the
 # vehicle condition on every case. The work code table's JSON instead ors the
 # collision types in on their own, which would credit any rear-end crash at an
-# intersection to a turning-radius fix.
+# intersection to a turning-radius fix. Kimley-Horn confirmed (2026-11-13) that
+# the table's grouping was an error: the correct criteria are Veh Body Style
+# AND (FHE or MOC), as written here.
 #
 # Body style: the guidelines' decoding table lists 87 (truck-tractor) and 91
 # (semitrailer), but that numbering is not the one CRIS uses. In the CRIS
 # public extract specification (VEH_BODY_STYL_LKP), 87 is TRUCK TRACTOR, 102 is
 # TRAILER, SEMI-TRAILER, OR POLE TRAILER, and 91 does not exist. So this rule
-# uses 87 and 102; 91 would silently drop every semitrailer.
+# uses 87 and 102; 91 would silently drop every semitrailer. Kimley-Horn
+# confirmed 102 is intended, to match the public extract's dictionary.
 - id: 524
   label: Increase Turning Radius
   combine: and

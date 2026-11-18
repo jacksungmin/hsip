@@ -28,7 +28,7 @@ function makeSite(id: string): Site {
       drawnGeometry: point,
       bufferFeet: 150,
       bufferedGeometry: square,
-      crashes: [{ id: 'c1', severity: 'K' }],
+      crashes: [{ id: 'c1', severity: 'K', year: 2024 }],
     }],
     crashIds: ['c1'],
     crashSeverity: { K: 1, A: 0, B: 0 },

@@ -53,12 +53,15 @@ simplify the boundary coordinates.
   inside WSL (`sudo apt install tippecanoe`). Run the pipeline
   from the WSL terminal.
 
-  Without WSL, `notebooks/windows_data_build.ipynb` runs the same
-  pipeline from native Windows Python. It checks dependencies, falls
-  back to the GDAL/pyogrio PMTiles writer when `tippecanoe` isn't on
-  `PATH`, and breaks the build into cells (jurisdictions, crashes,
-  one overlay, full build) so a step can be re-run without repeating
-  the others.
+  `notebooks/windows_data_build.ipynb` breaks the build into cells
+  (jurisdictions, crashes, one overlay, full build) so a step can be
+  re-run on its own. It does not remove the need for tippecanoe: there
+  is no other PMTiles writer, so the crash and overlay steps need it on
+  `PATH` and the notebook stops with instructions when it is missing.
+  On Windows, run those steps from WSL.
+
+  Use pandas 2.x (`requirements.txt` pins it below 3). pandas 3 changed
+  its string and copy defaults, and the pipeline is verified on 2.x.
 
 ## Setup (one time)
 

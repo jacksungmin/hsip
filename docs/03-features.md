@@ -52,8 +52,13 @@ its type is chosen as it is drawn:
 
 Sites can also come from an uploaded file (`.geojson`, or a `.shp`
 in a zip). A file of points becomes an intersection site; a file of
-lines becomes a roadway site. A file holding several shapes produces
-one site with several **parts**, one per shape.
+lines becomes a roadway site. A file holding several shapes produces,
+at the user's choice, **one site per shape** (the default, so an agency
+can load all its project locations at once and review each separately)
+or **one site with several parts** analyzed together. A site with
+several parts can later be **split** into one site per part; any
+countermeasure plan it had was costed for the group as a whole and is
+discarded, after a confirmation.
 
 Every site carries a **buffer**: a distance outward from the drawn
 shape. The buffer does two jobs. It decides which crashes count as

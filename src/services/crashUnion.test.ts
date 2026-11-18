@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { Site, SitePart } from '../types'
-import { dedupeCrashUnion, hsipPeriodCrashes, withSiteParts } from './crashUnion'
+import { dedupeCrashUnion, hsipPeriodCrashes, splitSiteIntoSites, withSiteParts } from './crashUnion'
 import { HSIP_PERIOD_YEARS } from '../data/hsipProgram'
 
 const row = (id: string, severity: string) => ({ id, severity })
@@ -124,5 +124,55 @@ describe('hsipPeriodCrashes', () => {
     const legacy = { id: 'legacy', severity: 'K' } as unknown as SitePart['crashes'][number]
     const period = hsipPeriodCrashes(site([part('p1', [legacy])]))
     expect(period.refs).toEqual([])
+  })
+})
+
+// KH (LSAP agencies): load all project locations, review each separately.
+describe('splitSiteIntoSites', () => {
+  const part = (id: string, name: string, crashes: SitePart['crashes']): SitePart => ({
+    id,
+    name,
+    drawnGeometry: { type: 'Point', coordinates: [0, 0] },
+    bufferFeet: 150,
+    bufferedGeometry: { type: 'Polygon', coordinates: [] },
+    crashes,
+  })
+  const group: Site = withSiteParts(
+    {
+      id: 'site-g',
+      name: 'Corridor projects',
+      type: 'intersection',
+      source: 'upload',
+      parts: [],
+      crashIds: [],
+      crashSeverity: { K: 0, A: 0, B: 0 },
+      growthRatePercent: 3,
+      owner: 'City of Houston',
+      description: 'Describes the group',
+    },
+    [
+      part('p1', 'Main at 1st', [{ id: 'c1', severity: 'K', year: 2024 }, { id: 'shared', severity: 'B', year: 2024 }]),
+      part('p2', 'Main at 2nd', [{ id: 'shared', severity: 'B', year: 2024 }, { id: 'c3', severity: 'A', year: 2024 }]),
+    ],
+  )
+
+  it("makes one site per part, named after it, with that part's crashes", () => {
+    const sites = splitSiteIntoSites(group)
+    expect(sites.map((s) => s.name)).toEqual(['Main at 1st', 'Main at 2nd'])
+    expect(sites.map((s) => s.parts.map((p) => p.id))).toEqual([['p1'], ['p2']])
+    expect(sites[0].crashIds).toEqual(['c1', 'shared'])
+    expect(sites[1].crashSeverity).toEqual({ K: 0, A: 1, B: 1 })
+  })
+
+  it('keeps location assumptions and the source, but not the group description or id', () => {
+    const [s] = splitSiteIntoSites(group)
+    expect(s.type).toBe('intersection')
+    expect(s.source).toBe('upload')
+    expect(s.growthRatePercent).toBe(3)
+    expect(s.owner).toBe('City of Houston')
+    expect(s.description).toBeUndefined()
+    expect(s.id).not.toBe(group.id)
+    const ids = splitSiteIntoSites(group).map((x) => x.id)
+    expect(new Set(ids).size).toBe(2)
   })
 })

@@ -14,7 +14,7 @@
   import { workbenchState } from '../state/workbenchState.svelte'
   import { bufferRange, createPart, createSite, demoteRenames, isAutoName, nextGroupName, nextPartName, partCountLabel, partNameBase, partNoun, singleSitePromotionRenames, replacePartGeometry, requeryPartBuffer, requerySiteBuffer, siteBadgeLabel, siteCrashProfile } from '../services/siteHelpers'
   import { calculateSiteAlternatives, resolveChosenAlternative } from '../services/sitePlan'
-  import { dedupeCrashUnion, hsipPeriodCrashes, withSiteParts } from '../services/crashUnion'
+  import { dedupeCrashUnion, hsipPeriodCrashes, splitSiteIntoSites, withSiteParts } from '../services/crashUnion'
   import { HSIP_PERIOD_LABEL } from '../data/hsipProgram'
   import { projectState } from '../state/projectState.svelte'
   import { get as getCrashCost } from '../data/crashCostTable'
@@ -127,9 +127,17 @@
     typeChoice = null
   }
 
-  async function handleUploadConfirm(config: { result: ParseResult; siteName: string; nameColumn: string | null }) {
-    const { result, siteName } = config
-    const base = partNameBase(uploadType)
+  async function handleUploadConfirm(config: {
+    result: ParseResult
+    siteName: string
+    nameColumn: string | null
+    createAs: 'separate' | 'group'
+  }) {
+    const { result, siteName, createAs } = config
+    // Separate sites are named after their parts, so an unnamed feature
+    // takes the entered prefix ("Main St 1") rather than a generic
+    // "Intersection 1" that would collide across uploads.
+    const base = createAs === 'separate' ? siteName.trim() : partNameBase(uploadType)
     const parts = await Promise.all(
       result.features.map(async (f, i) => {
         return createPart({
@@ -150,8 +158,15 @@
       crashSeverity,
       growthRatePercent: 2,
     }
-    siteList.add(site)
-    activeSite.set(site.id)
+    if (createAs === 'separate' && parts.length > 1) {
+      const sites = splitSiteIntoSites(site)
+      // add() puts each new site first; adding in reverse keeps file order.
+      for (const s of [...sites].reverse()) siteList.add(s)
+      activeSite.set(sites[0].id)
+    } else {
+      siteList.add(site)
+      activeSite.set(site.id)
+    }
     uploadOpen = false
   }
 
@@ -349,6 +364,32 @@
   }
 
   let removalCandidate = $state<Site | null>(null)
+  let splitCandidate = $state<Site | null>(null)
+
+  // Split a group into one site per part. The group's alternatives were
+  // costed for the group as a whole and cannot be divided among its parts,
+  // so they are discarded; that is why a group with planning work asks first.
+  function doSplitSite(site: Site) {
+    const sites = splitSiteIntoSites(site)
+    siteList.replaceSite(site.id, sites)
+    projectState.removeBySite(site.id)
+    if (workbenchState.siteId === site.id) workbenchState.close()
+    if (activeSite.get() === site.id) activeSite.set(sites[0]?.id ?? null)
+  }
+
+  function requestSplitSite(site: Site) {
+    if (site.parts.length < 2) return
+    if (projectState.getAlternatives(site.id).length > 0) {
+      splitCandidate = site
+    } else {
+      doSplitSite(site)
+    }
+  }
+
+  function confirmSplitSite() {
+    if (splitCandidate) doSplitSite(splitCandidate)
+    splitCandidate = null
+  }
 
   function doRemoveSite(site: Site) {
     siteList.remove(site.id)
@@ -1198,6 +1239,9 @@
                       <Button variant="outline" size="xs" class="flex-1 text-xs" disabled={workflowMode !== 'idle'} onclick={() => startSiteBufferEdit(site)}>
                         Change buffer for all
                       </Button>
+                      <Button variant="outline" size="xs" class="flex-1 text-xs" disabled={workflowMode !== 'idle'} onclick={() => requestSplitSite(site)}>
+                        Split into {site.parts.length} sites
+                      </Button>
                     {/if}
                     <Button variant="destructive" size="xs" class="text-xs" disabled={workflowMode !== 'idle'} onclick={() => requestRemoveSite(site)}>
                       Remove {site.parts.length > 1 ? 'group' : 'site'}
@@ -1279,6 +1323,26 @@
     <AlertDialog.Footer>
       <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
       <AlertDialog.Action onclick={confirmRemoveSite}>Remove {removalCandidate && removalCandidate.parts.length > 1 ? 'group' : 'site'}</AlertDialog.Action>
+    </AlertDialog.Footer>
+  </AlertDialog.Content>
+</AlertDialog.Root>
+
+<AlertDialog.Root open={splitCandidate !== null} onOpenChange={(open) => { if (!open) splitCandidate = null }}>
+  <AlertDialog.Content>
+    <AlertDialog.Header>
+      <AlertDialog.Title>Split {splitCandidate?.name} into separate sites?</AlertDialog.Title>
+      <AlertDialog.Description>
+        {#if splitCandidate}
+          {@const altCount = projectState.getAlternatives(splitCandidate.id).length}
+          Each of its {partCountLabel(splitCandidate.type, splitCandidate.parts.length)} becomes its own site.
+          The group's {altCount} evaluated alternative{altCount === 1 ? '' : 's'} {altCount === 1 ? 'was' : 'were'} costed for the
+          whole group and will be discarded; plan each new site separately.
+        {/if}
+      </AlertDialog.Description>
+    </AlertDialog.Header>
+    <AlertDialog.Footer>
+      <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+      <AlertDialog.Action onclick={confirmSplitSite}>Split into {splitCandidate?.parts.length ?? ''} sites</AlertDialog.Action>
     </AlertDialog.Footer>
   </AlertDialog.Content>
 </AlertDialog.Root>

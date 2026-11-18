@@ -173,3 +173,17 @@ describe('siteList part ops', () => {
     expect(s.growthRatePercent).toBe(3)
   })
 })
+
+// Splitting a group swaps it for its new sites in the same place, so the
+// list order the analyst sees does not jump.
+describe('replaceSite', () => {
+  beforeEach(() => siteList.applySnapshot([]))
+
+  it('replaces one site with several at its position', () => {
+    siteList.add(makeSite('c', [makePart('pc', [])]))
+    siteList.add(makeSite('group', [makePart('p1', []), makePart('p2', [])]))
+    siteList.add(makeSite('a', [makePart('pa', [])]))
+    siteList.replaceSite('group', [makeSite('g1', [makePart('p1', [])]), makeSite('g2', [makePart('p2', [])])])
+    expect(siteList.get().map((s) => s.id)).toEqual(['a', 'g1', 'g2', 'c'])
+  })
+})

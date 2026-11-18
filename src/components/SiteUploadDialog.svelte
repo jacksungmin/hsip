@@ -18,7 +18,12 @@
   }: {
     open: boolean
     siteType: SiteType
-    onConfirm: (config: { result: ParseResult; siteName: string; nameColumn: string | null }) => void
+    onConfirm: (config: {
+      result: ParseResult
+      siteName: string
+      nameColumn: string | null
+      createAs: 'separate' | 'group'
+    }) => void
   } = $props()
 
   let step = $state<'drop' | 'configure'>('drop')
@@ -30,6 +35,10 @@
   let siteName = $state('')
   let nameColumn = $state<string | null>(null)
   let dragOver = $state(false)
+  // A file with several locations becomes one site per location by default:
+  // agencies typically load all their project locations at once and review
+  // each separately. A group (one crash set, one plan) remains an option.
+  let createAs = $state<'separate' | 'group'>('separate')
 
   const COMMON_NAME_FIELDS = ['name', 'Name', 'NAME', 'label', 'Label', 'LABEL']
 
@@ -43,6 +52,7 @@
     siteName = ''
     nameColumn = null
     dragOver = false
+    createAs = 'separate'
   }
 
   $effect(() => {
@@ -99,17 +109,21 @@
       finalResult = { ...parseResult, features: applyNameColumn(parseResult.features, nameColumn) }
     }
 
-    onConfirm({ result: finalResult, siteName, nameColumn })
+    const multiple = finalResult.features.length > 1
+    onConfirm({ result: finalResult, siteName, nameColumn, createAs: multiple ? createAs : 'group' })
   }
 
   const geomLabel = $derived(siteType === 'roadway' ? 'line' : 'point')
+  const featureCount = $derived(parseResult?.features.length ?? 0)
+  const separate = $derived(featureCount > 1 && createAs === 'separate')
+  const noun = $derived(siteType === 'roadway' ? 'segment' : 'intersection')
 </script>
 
 <Dialog.Root bind:open>
   <Dialog.Content class="sm:max-w-md">
     <Dialog.Header>
       <Dialog.Title>
-        Import {siteType === 'roadway' ? 'roadway' : 'intersection'} site from file
+        Import {siteType === 'roadway' ? 'roadway segments' : 'intersections'} from file
       </Dialog.Title>
     </Dialog.Header>
 
@@ -163,8 +177,35 @@
           </p>
         {/if}
 
+        {#if featureCount > 1}
+          <fieldset>
+            <legend class="text-sm font-medium">Create as</legend>
+            <div class="mt-1 grid gap-2">
+              <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm {createAs === 'separate' ? 'border-primary bg-primary/5' : ''}">
+                <input type="radio" name="upload-create-as" value="separate" bind:group={createAs} class="mt-1" />
+                <span>
+                  <span class="font-medium">{featureCount} separate sites</span>
+                  <span class="block text-xs text-muted-foreground">One site per {noun}, each with its own crashes and countermeasures.</span>
+                </span>
+              </label>
+              <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm {createAs === 'group' ? 'border-primary bg-primary/5' : ''}">
+                <input type="radio" name="upload-create-as" value="group" bind:group={createAs} class="mt-1" />
+                <span>
+                  <span class="font-medium">One group site</span>
+                  <span class="block text-xs text-muted-foreground">All {featureCount} {noun}s analyzed together, with one countermeasure plan.</span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+        {/if}
+
         <div>
-          <label for="upload-site-name" class="text-sm font-medium">Site name</label>
+          <label for="upload-site-name" class="text-sm font-medium">{separate ? 'Site name prefix' : 'Site name'}</label>
+          {#if separate}
+            <p class="mt-0.5 text-xs text-muted-foreground">
+              Sites are named from the name column below, or "{siteName.trim() || 'Prefix'} 1", "{siteName.trim() || 'Prefix'} 2"… if none is chosen.
+            </p>
+          {/if}
           <Input id="upload-site-name" bind:value={siteName} class="mt-1" />
         </div>
 
@@ -173,7 +214,7 @@
             {siteType === 'roadway' ? 'Segment' : 'Intersection'} name column
           </p>
           <p class="mt-0.5 text-xs text-muted-foreground">
-            Attribute to use for part names. Leave as "None" to auto-generate.
+            {separate ? 'Attribute to use for site names.' : 'Attribute to use for part names.'} Leave as "None" to auto-generate.
           </p>
           <Select.Root type="single" value={nameColumn ?? ''} onValueChange={(v) => { nameColumn = v || null }}>
             <Select.Trigger class="mt-1 w-full" aria-labelledby="upload-name-column-label">
@@ -197,7 +238,7 @@
           {#if creating}
             <LoaderCircleIcon class="mr-1.5 h-4 w-4 animate-spin" />
           {/if}
-          Create site
+          {separate ? `Create ${featureCount} sites` : 'Create site'}
         </Button>
       {/if}
     </Dialog.Footer>

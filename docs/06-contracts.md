@@ -752,6 +752,9 @@ interface SiteList {
   get(): SiteListValue
   add(site: Site):        void
   remove(siteId: string): void
+  replaceSite(siteId: string, sites: Site[]): void  // splitting a group: its parts become
+                                                    // sites (crashUnion.splitSiteIntoSites),
+                                                    // in the group's place in the list
 
   addPart(siteId: string, part: SitePart):                                              void
   removePart(siteId: string, partId: string):                                           void

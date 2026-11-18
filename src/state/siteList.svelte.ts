@@ -13,6 +13,8 @@ export interface SiteList {
   get(): SiteListValue
   add(site: Site): void
   remove(siteId: string): void
+  // Swap one site for several, in its place in the list (splitting a group).
+  replaceSite(siteId: string, sites: Site[]): void
   addPart(siteId: string, part: SitePart): void
   removePart(siteId: string, partId: string): void
   updatePartBuffer(siteId: string, partId: string, fields: PartBufferFields): void
@@ -38,6 +40,10 @@ class SiteListImpl implements SiteList {
 
   remove(siteId: string): void {
     this.#sites = this.#sites.filter((s) => s.id !== siteId)
+  }
+
+  replaceSite(siteId: string, sites: Site[]): void {
+    this.#sites = this.#sites.flatMap((s) => (s.id === siteId ? sites : [s]))
   }
 
   addPart(siteId: string, part: SitePart): void {

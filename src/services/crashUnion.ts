@@ -50,3 +50,30 @@ export function withSiteParts(site: Site, parts: SitePart[]): Site {
   const { crashIds, crashSeverity } = dedupeCrashUnion(parts.map((part) => part.crashes))
   return { ...site, parts, crashIds, crashSeverity }
 }
+
+// One site per part: breaks a group into individual sites, each named after
+// its part and analyzed on its own crash set. Used to split an existing
+// group and to create separate sites from an uploaded file. Site-level
+// assumptions that describe the location (growth rate, owner, functional
+// class) carry over; the group's description does not, since it described
+// the group. Planning work (alternatives) is the caller's to settle: it was
+// costed for the group as a whole and cannot be divided.
+export function splitSiteIntoSites(site: Site): Site[] {
+  return site.parts.map((part) =>
+    withSiteParts(
+      {
+        id: `site:${crypto.randomUUID()}`,
+        name: part.name,
+        type: site.type,
+        source: site.source,
+        parts: [],
+        crashIds: [],
+        crashSeverity: { K: 0, A: 0, B: 0 },
+        ...(site.growthRatePercent !== undefined ? { growthRatePercent: site.growthRatePercent } : {}),
+        ...(site.owner !== undefined ? { owner: site.owner } : {}),
+        ...(site.functionalClass !== undefined ? { functionalClass: site.functionalClass } : {}),
+      },
+      [part],
+    ),
+  )
+}

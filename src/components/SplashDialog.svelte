@@ -6,6 +6,8 @@
   import { identity } from '../data/appConfig'
   import hgacLogo from '../../config/assets/logo.png'
   import splashMarkdown from '../../config/splash.md?raw'
+  import { HSIP_GUIDELINES, HSIP_PERIOD_LABEL } from '../data/hsipProgram'
+  import { PREVIEW_LABEL } from '../data/release'
   import ArrowRightIcon from '@lucide/svelte/icons/arrow-right'
   import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle'
   import CheckIcon from '@lucide/svelte/icons/check'
@@ -17,11 +19,20 @@
   }
 
   // Same treatment as the report cover page (ReportAbout.svelte): strip the
-  // file's editing-guidance comment, then render. No token substitution here —
-  // nothing on the splash depends on the data, which has not loaded yet.
-  const splashHtml = marked.parse(splashMarkdown.replace(/<!--[\s\S]*?-->/g, ''), {
-    async: false,
-  })
+  // file's editing-guidance comment, substitute tokens, then render. Only
+  // build-time values are offered as tokens (config/hsip/hsip_program.yaml):
+  // the splash shows before the data has loaded, so nothing here may depend
+  // on it.
+  const tokens: Record<string, string> = {
+    guidelines: HSIP_GUIDELINES,
+    analysisRange: HSIP_PERIOD_LABEL,
+  }
+  const splashHtml = marked.parse(
+    splashMarkdown
+      .replace(/<!--[\s\S]*?-->/g, '')
+      .replace(/\{\{(\w+)\}\}/g, (match, key: string) => tokens[key] ?? match),
+    { async: false },
+  )
 </script>
 
 <Dialog.Root bind:open>
@@ -35,6 +46,11 @@
       <h2 class="text-lg leading-snug font-semibold tracking-tight">
         Welcome to {identity.fullName}
       </h2>
+      {#if PREVIEW_LABEL}
+        <p class="mt-1.5 rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-900">
+          <strong>{PREVIEW_LABEL}.</strong> This is a review version, not the official tool. Reports from it are for review only.
+        </p>
+      {/if}
     </div>
 
     <div class="px-6 pt-5 pb-4">

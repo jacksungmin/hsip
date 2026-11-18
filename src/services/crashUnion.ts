@@ -2,7 +2,8 @@
 // (store-side union recompute). No IO imports: the store can use it
 // without a dependency cycle, and tests need no worker mocking.
 
-import type { SeverityTriplet, Site, SitePart } from '../types'
+import type { CrashRef, SeverityTriplet, Site, SitePart } from '../types'
+import { inHsipPeriod } from '../data/hsipProgram'
 
 export function tallySeverity(crashes: { severity: string }[]): SeverityTriplet {
   const t: SeverityTriplet = { K: 0, A: 0, B: 0 }
@@ -28,6 +29,18 @@ export function dedupeCrashUnion<T extends { id: string; severity: string }>(
   }
   const records = [...byId.values()]
   return { records, crashIds: records.map((r) => r.id), crashSeverity: tallySeverity(records) }
+}
+
+// The site's crashes inside the SII analysis period: the deduped union
+// across parts, filtered by crash year. This is the crash set planning
+// counts (crash history, countermeasure benefits, the report); the site's
+// crashIds/crashSeverity stay the full history diagnosis shows. A ref
+// without a year (a session captured before refs carried one) is outside
+// the period rather than guessed into it.
+export function hsipPeriodCrashes(site: Site): { refs: CrashRef[]; severity: SeverityTriplet } {
+  const { records } = dedupeCrashUnion(site.parts.map((part) => part.crashes))
+  const refs = records.filter((r) => inHsipPeriod(r.year))
+  return { refs, severity: tallySeverity(refs) }
 }
 
 // Project a site with a replacement part list and its matching deduped

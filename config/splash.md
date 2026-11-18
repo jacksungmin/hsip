@@ -7,11 +7,20 @@
      No headings — the dialog supplies its own from `identity.fullName` in
      app.yaml. The first paragraph sits beside the logo at full contrast, the
      rest are muted (styled in SplashDialog.svelte). The "01 Diagnose /
-     02 Plan" steps below are part of the app, not content. -->
+     02 Plan" steps below are part of the app, not content.
+
+     Two tokens are filled in from config/hsip/hsip_program.yaml, so they
+     follow that file when the next call for projects updates it:
+       {{guidelines}}    - e.g. "2027 TxDOT HSIP Guidelines"
+       {{analysisRange}} - the SII analysis period, e.g. "2023-2025"
+     A "What's new" paragraph was drafted for the 2027 update and dropped on
+     Kimley-Horn's advice (2026-11-13): few current users would be surprised
+     by the change, and the one-line "Updated for" note is enough. -->
 
 Developed as part of the H-GAC Safety Action Plan, this application is designed
 to make applying TxDOT's Highway Safety Improvement Program (HSIP) Safety
-Investment Index methodology more streamlined and interactive.
+Investment Index methodology more streamlined and interactive. **Updated for
+the {{guidelines}}.**
 
 The application is designed with two phases in mind.
 **Crash Diagnosis** — explore crash trends for a selected region, then mark

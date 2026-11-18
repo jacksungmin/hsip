@@ -53,6 +53,7 @@ to cite.
 | `hsip/countermeasures.csv` | The HSIP countermeasure catalog: reduction factors, service life, emphasis areas | TxDOT revises the HSIP guide |
 | `hsip/hsip_rules.yaml` | Which crashes each countermeasure is credited against | A crediting rule is found to be wrong |
 | `hsip/ea_rules.yaml` | Which crashes fall into each emphasis area | An emphasis area definition changes |
+| `hsip/hsip_program.yaml` | The guidelines edition shown on the report, and the SII analysis years (the crash years every benefit is counted from) | Each new call for projects |
 
 The two `*_rules.yaml` files share one condition language, documented in
 the header of each. Both have the same trap: **a misspelled CRIS field
@@ -64,6 +65,19 @@ check that its flag count is not zero.
 `Work Code` column and the rule ids must correspond one-to-one. Add or
 remove a work code in both files together. The header of
 `hsip_rules.yaml` explains what breaks if they drift.
+
+**Changing the work-code list needs a crash-data rebuild.** Each crash's
+work-code flags are stored as bits in CSV row order, so adding, removing
+or reordering a row changes what every later bit means. The app build
+and the app itself compare the CSV against the order recorded in
+`public/manifest.json` and refuse to run until the data is rebuilt
+(`tools/data-build`: `python build.py --only crashes`). Editing a
+reduction factor, cost or description needs no rebuild.
+
+`hsip/hsip_program.yaml` sets the years the SII is calculated from.
+List them explicitly, consecutive and oldest first. Every year listed
+must be in the published crash data, or the build fails. The map and
+diagnosis keep the full crash history regardless.
 
 ## schemas/
 

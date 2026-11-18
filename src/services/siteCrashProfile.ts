@@ -18,9 +18,11 @@ function incrementSeverity(counts: SeverityTriplet, severity: Severity): void {
 // Synchronous projection of already-loaded crash rows. Database access stays
 // at the caller, allowing buffer edits to query once and immediately refresh
 // planning metrics from the same crash set. `dataYears` is passed in for the
-// same reason: it is provenance of the published data, read from the manifest
-// by the caller, and this function stays a pure projection with no ambient
-// dependency on which data set happens to be loaded.
+// same reason: it is the exposure period the crashes were drawn from (the SII
+// analysis period, HSIP_PERIOD_LENGTH, for every planning caller), and this
+// function stays a pure projection with no ambient dependency on it. Callers
+// must pass crashes from exactly that period; siteHelpers.siteCrashProfile
+// pairs the two.
 export function buildSiteCrashProfile(
   crashes: ProfileCrash[],
   dataYears: number,

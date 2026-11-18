@@ -15,7 +15,7 @@
 export const ARTIFACT_KEYS = ['appDb', 'crashTiles', 'jurisdictions'] as const
 export type ArtifactKey = (typeof ARTIFACT_KEYS)[number]
 
-export const MANIFEST_SCHEMA_VERSION = 3
+export const MANIFEST_SCHEMA_VERSION = 4
 
 // Overlay tilesets live in their own open-ended section rather than in
 // `artifacts`, because which ones exist is a data-build config decision the
@@ -40,8 +40,15 @@ export type OverlayTileset = {
 // year missing from the source export gives seven years spanning 2018-2025,
 // and dividing by the span would understate every crash rate. Count and label
 // are both derived from this one field, so they cannot disagree.
+//
+// `hsipFields` and `eaFields` are the flag layout: the order the crash build
+// packed each crash's hsip_flags / ea_flags bits in. The app decodes those
+// bits by position in its own lists, so the two must match exactly; see
+// checkFlagLayout.
 export type CrashDataProvenance = {
   years: number[]
+  hsipFields: string[]
+  eaFields: string[]
 }
 
 export type DataManifest = {
@@ -104,7 +111,50 @@ function parseCrashData(raw: unknown): CrashDataProvenance {
   if (!years.every((y): y is number => typeof y === 'number' && Number.isInteger(y))) {
     throw new Error('manifest crashData.years must contain only integers')
   }
-  return { years: [...years].sort((a, b) => a - b) }
+  const fieldList = (key: 'hsipFields' | 'eaFields'): string[] => {
+    const list = (raw as Record<string, unknown>)[key]
+    if (!Array.isArray(list) || list.length === 0) {
+      throw new Error(`manifest crashData.${key} must be a non-empty array`)
+    }
+    if (!list.every((f): f is string => typeof f === 'string' && f !== '')) {
+      throw new Error(`manifest crashData.${key} must contain only field names`)
+    }
+    return [...list]
+  }
+  return {
+    years: [...years].sort((a, b) => a - b),
+    hsipFields: fieldList('hsipFields'),
+    eaFields: fieldList('eaFields'),
+  }
+}
+
+// The crash database stores each crash's work-code and emphasis-area flags as
+// packed bits, and the app reads bit i as the i-th entry of its own list. A
+// list that differs from the one the database was built with does not fail
+// by itself: adding a work code to countermeasures.csv shifts every later
+// code's bit, and each countermeasure would be credited with a neighbour's
+// crashes. So the lists must match exactly, in order, or the app refuses to
+// start. Throws naming the first difference.
+export function checkFlagLayout(
+  crashData: CrashDataProvenance,
+  app: { hsipFields: readonly string[]; eaFields: readonly string[] },
+): void {
+  const pairs = [
+    ['work-code', crashData.hsipFields, app.hsipFields],
+    ['emphasis-area', crashData.eaFields, app.eaFields],
+  ] as const
+  for (const [what, data, mine] of pairs) {
+    const n = Math.max(data.length, mine.length)
+    for (let i = 0; i < n; i++) {
+      if (data[i] === mine[i]) continue
+      throw new Error(
+        `the crash data was built for a different ${what} list than this app ` +
+          `(${data.length} vs ${mine.length}; first difference at position ${i + 1}: ` +
+          `data ${data[i] ?? 'none'}, app ${mine[i] ?? 'none'}). Rebuild the crash data ` +
+          `from the app's current config/hsip and publish the app and data together.`,
+      )
+    }
+  }
 }
 
 // A malformed overlay entry is a hard error like any other: the app build

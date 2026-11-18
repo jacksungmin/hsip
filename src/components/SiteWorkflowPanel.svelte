@@ -14,7 +14,8 @@
   import { workbenchState } from '../state/workbenchState.svelte'
   import { bufferRange, createPart, createSite, demoteRenames, isAutoName, nextGroupName, nextPartName, partCountLabel, partNameBase, partNoun, singleSitePromotionRenames, replacePartGeometry, requeryPartBuffer, requerySiteBuffer, siteBadgeLabel, siteCrashProfile } from '../services/siteHelpers'
   import { calculateSiteAlternatives, resolveChosenAlternative } from '../services/sitePlan'
-  import { dedupeCrashUnion, withSiteParts } from '../services/crashUnion'
+  import { dedupeCrashUnion, hsipPeriodCrashes, withSiteParts } from '../services/crashUnion'
+  import { HSIP_PERIOD_LABEL } from '../data/hsipProgram'
   import { projectState } from '../state/projectState.svelte'
   import { get as getCrashCost } from '../data/crashCostTable'
   import type { Site, SitePart } from '../types'
@@ -418,8 +419,12 @@
     let costPrevented = 0
     let planned = 0
     for (const s of sites) {
-      countTotal += s.crashIds.length
-      const sev = s.crashSeverity
+      // Totals over the SII analysis period: `prevented` is computed from
+      // that period's crashes, so a total over the full history would
+      // understate the share prevented.
+      const period = hsipPeriodCrashes(s)
+      countTotal += period.refs.length
+      const sev = period.severity
       costTotal += sev.K * costK + sev.A * costA + sev.B * costB
       const chosen = projectState.getChosen(s.id)
       if (chosen) {
@@ -915,7 +920,7 @@
                 </div>
               </Tooltip.Trigger>
               <Tooltip.Content class="max-w-62 text-center">
-                {fmt(r.prevented)} of {fmt(r.total, true)} KAB {isCost ? 'crash cost' : 'crashes'} potentially prevented across {crashReduction.planned} planned site{crashReduction.planned === 1 ? '' : 's'}
+                {fmt(r.prevented)} of {fmt(r.total, true)} KAB {isCost ? 'crash cost' : 'crashes'} ({HSIP_PERIOD_LABEL}) potentially prevented across {crashReduction.planned} planned site{crashReduction.planned === 1 ? '' : 's'}
               </Tooltip.Content>
             </Tooltip.Root>
           </Tooltip.Provider>
@@ -924,7 +929,7 @@
               <div>
                 Total <b class="font-bold text-foreground">{fmt(r.total, true)}</b>
                 <b class="font-bold text-emerald-600">({r.prevented < 0.05 ? '−0' : '−' + fmt(r.prevented)})</b>
-                KAB {isCost ? 'crash cost' : 'crashes'}
+                KAB {isCost ? 'crash cost' : 'crashes'} {HSIP_PERIOD_LABEL}
               </div>
               <div class="mt-0.5">
                 {crashReduction.planned}/{crashReduction.siteCount} sites planned
@@ -987,7 +992,11 @@
                 <span class="flex-1 truncate text-sm font-medium">{site.name}</span>
               </div>
               <div class="mt-1 flex items-center gap-3 text-xs pt-1 text-muted-foreground">
-                <span>{site.crashIds.length} crashes</span>
+                {#if viewMode.get() === 'planning'}
+                  <span>{hsipPeriodCrashes(site).refs.length} crashes {HSIP_PERIOD_LABEL}</span>
+                {:else}
+                  <span>{site.crashIds.length} crashes</span>
+                {/if}
                 {#if len}
                   <span>{len} mi · {bufferRange(site)} ft</span>
                 {:else}

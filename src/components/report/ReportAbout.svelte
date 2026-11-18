@@ -11,9 +11,11 @@
 
   const html = $derived.by(() => {
     const tokens: Record<string, string> = {
-      dataYears: String(methods.dataYears),
-      yearPlural: methods.dataYears === 1 ? '' : 's',
-      dataRange: methods.dataRange,
+      analysisYears: String(methods.analysisYears),
+      yearPlural: methods.analysisYears === 1 ? '' : 's',
+      analysisRange: methods.analysisRange,
+      historyRange: methods.historyRange,
+      guidelines: methods.guidelines,
     }
     const filled = aboutMarkdown
       .replace(/<!--[\s\S]*?-->/g, '')

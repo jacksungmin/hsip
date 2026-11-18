@@ -17,8 +17,9 @@
 <section class="report-appendix">
   <h2>Appendix B — Calculation Basis</h2>
   <p class="report-appendix-intro">
-    The report applies the TxDOT HSIP Safety Investment Index (SII) method to
-    {methods.dataRange} crash data ({methods.dataYears} years).
+    The report applies the TxDOT HSIP Safety Investment Index (SII) method, per
+    the {methods.guidelines}, to KAB crashes in the analysis period
+    {methods.analysisRange} ({methods.analysisYears} years).
   </p>
 
   <section class="report-method-block">
@@ -39,7 +40,7 @@
       <div><dt>R</dt><dd>Countermeasure crash reduction factor (CRF)</dd></div>
       <div><dt>C<sub>f</sub></dt><dd>Crash cost for the K+A severity group</dd></div>
       <div><dt>C<sub>i</sub></dt><dd>Crash cost for the B severity group</dd></div>
-      <div><dt>Y</dt><dd>Years in the crash data period ({methods.dataYears})</dd></div>
+      <div><dt>Y</dt><dd>Years in the analysis period, {methods.analysisRange} ({methods.analysisYears})</dd></div>
       <div><dt>M</dt><dd>User-entered annual maintenance cost</dd></div>
       <div><dt>A<sub>a</sub> / A<sub>b</sub></dt><dd>Projected-to-baseline AADT ratio, calculated as (1 + g)<sup>L</sup></dd></div>
       <div><dt>g</dt><dd>Site annual traffic growth rate expressed as a decimal</dd></div>

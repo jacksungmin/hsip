@@ -1,0 +1,20 @@
+# TxDOT HSIP program-call settings: the values that change from one call for
+# projects to the next. Read at build time by vite-plugin-csv-config, which
+# fails the build on a malformed value or on an analysis year the published
+# crash data does not contain.
+
+# Shown on the report so a reviewer can tell which edition's criteria,
+# reduction factors and crash costs the numbers follow.
+guidelines: 2027 TxDOT HSIP Guidelines
+
+# The crash years the SII is calculated from. TxDOT uses the most recent three
+# years of crash data (2027 HSIP Guidelines, Table 2 on p. 19 and Table 4 on
+# p. 28; p. 7 names 2023-2025 as this call's three years), so planning
+# mode, the countermeasure benefits and the report count only crashes in these
+# years and divide by how many there are. Diagnosis mode and the map keep the
+# full crash history the data build published.
+#
+# Listed explicitly rather than derived as "the latest three", so a newly
+# published but still preliminary year never enters the SII by accident.
+# Consecutive years, oldest first.
+analysisYears: [2023, 2024, 2025]

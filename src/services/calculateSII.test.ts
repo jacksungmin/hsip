@@ -40,6 +40,7 @@ function makeCountermeasure(overrides: Partial<Countermeasure> = {}): Countermea
     serviceLife: 10,
     maintenanceCostRef: '$1,300',
     additionalDocs: null,
+    creditsAllCrashes: false,
     ...overrides,
   }
 }

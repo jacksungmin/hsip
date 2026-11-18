@@ -38,3 +38,9 @@ public/crashes_kab.pmtiles
 public/roads.pmtiles
 public/hin.pmtiles
 public/jurisdictions.geojson
+
+# Raw CRIS downloads and consultant working files: large, licensed, and
+# include a zip password file. Never commit. The build reads only the
+# copies placed under input_data/cris_export/.
+CRIS_data/
+2027/

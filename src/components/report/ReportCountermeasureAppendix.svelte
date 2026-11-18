@@ -50,6 +50,12 @@
               <dt>Emphasis areas addressed</dt>
               <dd>{countermeasure.emphasisAreas.length > 0 ? countermeasure.emphasisAreas.join(', ') : 'Not listed'}</dd>
             </div>
+            {#if countermeasure.creditsAllCrashes}
+              <div>
+                <dt>Crashes credited</dt>
+                <dd>All KAB crashes at the site (TxDOT preventable crash criteria: All)</dd>
+              </div>
+            {/if}
             <div>
               <dt>Crash reduction factor</dt>
               <dd>{reductionFactorText(countermeasure.reductionFactor)}</dd>

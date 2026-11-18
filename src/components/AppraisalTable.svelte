@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { HSIP_PERIOD_LABEL } from '../data/hsipProgram'
+  import { CREDITS_ALL_CRASHES_NOTE, getByWorkcode } from '../data/countermeasureCatalog'
   import type { Alternative } from '../types'
   import { projectState } from '../state/projectState.svelte'
   import { compareBySII } from '../services/sitePlan'
@@ -71,10 +73,10 @@
                 Preventable
               </Tooltip.Trigger>
               <Tooltip.Content class="max-w-52">
-                Number of historical crashes that are preventable by this countermeasure
+                KAB crashes at this site in the SII analysis period ({HSIP_PERIOD_LABEL}) that this countermeasure could have prevented
               </Tooltip.Content>
             </Tooltip.Root>
-            <div class="text-[10px] font-normal text-muted-foreground">K / A / B</div>
+            <div class="text-[10px] font-normal text-muted-foreground">K / A / B · {HSIP_PERIOD_LABEL}</div>
           </th>
           <th class="min-w-16 px-2 py-2 text-right font-semibold">
             CRF
@@ -144,6 +146,9 @@
                 <div class="min-w-0">
                   <div class="font-medium">{row.name}</div>
                   <div class="text-muted-foreground">WC {row.alt.workcode}{isBest ? ' · best' : ''}</div>
+                  {#if getByWorkcode(row.alt.workcode)?.creditsAllCrashes}
+                    <div class="text-amber-800" title={CREDITS_ALL_CRASHES_NOTE}>Counts all site crashes. Confirm fit.</div>
+                  {/if}
                 </div>
               </div>
             </td>

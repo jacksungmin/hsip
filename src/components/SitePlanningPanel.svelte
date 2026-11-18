@@ -6,7 +6,10 @@
   import { SEVERITY_LABELS, SEVERITY_COLORS, SEVERITY_HEAT_RGBA } from '../data/severityMeta'
   import { projectState } from '../state/projectState.svelte'
   import { calculateSiteAlternatives, compareBySII, type ComputedAlternative } from '../services/sitePlan'
-  import { bufferRange, querySiteCrashes, siteBadgeLabel, siteCrashProfile, type SiteCrashProfile } from '../services/siteHelpers'
+  import { bufferRange, queryHsipPeriodCrashes, siteBadgeLabel, siteCrashProfile, type SiteCrashProfile } from '../services/siteHelpers'
+  import { hsipPeriodCrashes } from '../services/crashUnion'
+  import { HSIP_GUIDELINES, HSIP_PERIOD_LABEL } from '../data/hsipProgram'
+  import { dataManifest } from '../state/dataManifest.svelte'
   import Pin from '@lucide/svelte/icons/pin'
   import * as ToggleGroup from '$lib/components/ui/toggle-group'
   import * as Tooltip from '$lib/components/ui/tooltip'
@@ -30,7 +33,10 @@
     }
 
     let cancelled = false
-    querySiteCrashes(site).then((crashes) => {
+    // Planning counts the SII analysis period only, so this panel, the
+    // countermeasure benefits beside it, and the report all describe the
+    // same crashes.
+    queryHsipPeriodCrashes(site).then((crashes) => {
       if (cancelled) return
       const sev: Record<string, number> = { K: 0, A: 0, B: 0 }
       const eaSev: Record<string, Record<string, number>> = {}
@@ -158,14 +164,15 @@
         <h2 class="text-sm font-semibold">{site.name}</h2>
       </div>
       <p class="mt-1 text-xs text-muted-foreground">
-        {site.crashIds.length} crashes in buffer · {bufferRange(site)} ft
+        {site.crashIds.length} KAB crashes {dataManifest.dataRange} · {hsipPeriodCrashes(site).refs.length} in SII period {HSIP_PERIOD_LABEL} · {bufferRange(site)} ft
       </p>
     </section>
 
     <section class="border-b p-4">
-      <h3 class="mb-3 text-sm font-semibold">
-        Crash history <span class="font-normal text-muted-foreground">{totalCrashes} total</span>
+      <h3 class="mb-1 text-sm font-semibold">
+        Crash history {HSIP_PERIOD_LABEL} <span class="font-normal text-muted-foreground">{totalCrashes} total</span>
       </h3>
+      <p class="mb-3 text-xs text-muted-foreground">SII analysis period, per the {HSIP_GUIDELINES}.</p>
       {#if severityCounts}
         <div class="flex gap-3">
           {#each SEVS as sev}
@@ -219,7 +226,7 @@
         </div>
         <p class="mt-2 text-xs leading-snug text-muted-foreground">A crash can appear in multiple emphasis areas. Column totals may exceed the crash count above.</p>
       {:else if eaSevCounts}
-        <div class="text-xs text-muted-foreground">No emphasis area crashes at this site</div>
+        <div class="text-xs text-muted-foreground">No emphasis area crashes at this site in {HSIP_PERIOD_LABEL}</div>
       {:else}
         <div class="text-xs text-muted-foreground">Loading...</div>
       {/if}

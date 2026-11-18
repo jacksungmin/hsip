@@ -3,6 +3,8 @@
   import turfLength from '@turf/length'
   import type { LineString } from 'geojson'
   import { EA_IDS, EA_LABELS } from '../../data/emphasisAreas'
+  import { HSIP_PERIOD_LABEL, inHsipPeriod } from '../../data/hsipProgram'
+  import { CREDITS_ALL_CRASHES_NOTE } from '../../data/countermeasureCatalog'
   import type { ReportAssets, ReportSiteBlock, Severity, SeverityTriplet } from '../../types'
   import { compareBySII } from '../../services/sitePlan'
   import ReportMapMeta from './ReportMapMeta.svelte'
@@ -71,7 +73,7 @@
 
   const siteSummary = $derived.by(() => {
     const counts = block.crashCounts.bySeverity
-    const crashSummary = `${block.crashCounts.total} KAB crashes (${counts.K + counts.A} K+A)`
+    const crashSummary = `${block.crashCounts.total} KAB crashes ${HSIP_PERIOD_LABEL} (${counts.K + counts.A} K+A)`
     const partCount = block.site.parts.length
 
     if (block.site.type === 'roadway') {
@@ -232,6 +234,9 @@
                   <strong>{row.countermeasure.name}</strong>
                   {#if row.isChosen}<span class="report-selected-badge">Selected</span>{/if}
                   <span class="report-alt-workcode">Work code {row.countermeasure.workcode}</span>
+                  {#if row.countermeasure.creditsAllCrashes}
+                    <span class="report-alt-note">{CREDITS_ALL_CRASHES_NOTE}</span>
+                  {/if}
                 </div>
               </div>
 
@@ -305,7 +310,7 @@
               >
                 <figcaption>
                   <strong>Part {partIndex + 1}: {part.name}</strong>
-                  <span>{part.crashes.length} KAB crashes · {part.bufferFeet} ft buffer</span>
+                  <span>{part.crashes.filter((c) => inHsipPeriod(c.year)).length} KAB crashes {HSIP_PERIOD_LABEL} · {part.bufferFeet} ft buffer</span>
                 </figcaption>
                 {#if partMap}
                   <img
@@ -645,6 +650,15 @@
     color: #666;
     font-size: 7pt;
     white-space: nowrap;
+  }
+
+  /* Its own line under the title: the caution for countermeasures credited
+     against every crash at the site. */
+  .report-alt-note {
+    flex-basis: 100%;
+    color: #8a5a00;
+    font-size: 6.8pt;
+    font-style: italic;
   }
 
   .report-alt-metrics {

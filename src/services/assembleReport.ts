@@ -25,8 +25,12 @@ export type AssembleReportInput = {
   countermeasureCatalog: Countermeasure[]
   crashCostTable: CrashCostEntry[]
   projectInfo: ProjectInfo
-  dataYears: number
-  dataRange: string
+  // crashesBySite must hold only crashes inside this period; see
+  // ReportPayload['methods'].
+  analysisYears: number
+  analysisRange: string
+  historyRange: string
+  guidelines: string
   buildId: string
   appVersion: string
 }
@@ -136,8 +140,10 @@ export function assembleReport(input: AssembleReportInput): ReportPayload {
     countermeasureCatalog,
     crashCostTable,
     projectInfo,
-    dataYears,
-    dataRange,
+    analysisYears,
+    analysisRange,
+    historyRange,
+    guidelines,
     buildId,
     appVersion,
   } = input
@@ -158,7 +164,7 @@ export function assembleReport(input: AssembleReportInput): ReportPayload {
       chosenBySite[site.id],
       catalogByWorkcode,
       crashCostTable,
-      dataYears,
+      analysisYears,
     )
   })
 
@@ -183,7 +189,7 @@ export function assembleReport(input: AssembleReportInput): ReportPayload {
     projectInfo,
     sites: siteBlocks,
     countermeasures: uniqueCountermeasures,
-    methods: { dataYears, dataRange, crashCostTable },
+    methods: { analysisYears, analysisRange, historyRange, guidelines, crashCostTable },
     metadata: { buildId, appVersion },
   }
 }

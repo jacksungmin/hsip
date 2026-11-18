@@ -400,6 +400,10 @@ type ReportSiteBlock = {
     SII: number | null
     isChosen: boolean
   }>
+  selectedPreventableCrashes: { id: string; date: string; severity: Severity }[]
+                                                    // crashes the chosen countermeasure is credited
+                                                    // against in the SII period, K/A/B then date;
+                                                    // listed by crash ID in Appendix C
 }
 ```
 

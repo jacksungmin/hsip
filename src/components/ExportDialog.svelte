@@ -7,7 +7,10 @@
   import { siteList } from '../state/siteList.svelte'
   import { projectState } from '../state/projectState.svelte'
   import { reportGeneration } from '../services/reportGenerationState.svelte'
+  import { exportCrashesCsv } from '../services/crashExport'
+  import { dataManifest } from '../state/dataManifest.svelte'
   import FileText from '@lucide/svelte/icons/file-text'
+  import Download from '@lucide/svelte/icons/download'
 
   let {
     open = $bindable(false),
@@ -22,6 +25,25 @@
     sites.filter((s) => projectState.getChosen(s.id) != null).length,
   )
   const totalCount = $derived(sites.length)
+
+  // Crash-level CSV for analysis outside the tool; see services/crashExport.
+  let csvBusy = $state(false)
+  let csvMessage = $state<string | null>(null)
+  let csvError = $state<string | null>(null)
+
+  async function exportCsv() {
+    csvBusy = true
+    csvMessage = null
+    csvError = null
+    try {
+      const { rows, file } = await exportCrashesCsv()
+      csvMessage = `Downloaded ${rows.toLocaleString('en-US')} crash row${rows === 1 ? '' : 's'} as ${file}.`
+    } catch (err) {
+      csvError = `Could not export crash data: ${(err as Error).message}`
+    } finally {
+      csvBusy = false
+    }
+  }
 
   async function generate() {
     open = false
@@ -95,12 +117,26 @@
       </div>
     </div>
 
+    <div class="grid gap-1 rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+      <p>
+        <span class="font-medium text-foreground">Crash data (CSV):</span> every KAB crash in every site's buffer,
+        {dataManifest.current ? dataManifest.dataRange : 'all years'}, with its site, severity, location, emphasis areas,
+        the work codes it counts toward, and whether it falls in the SII period. Opens in Excel.
+      </p>
+      {#if csvMessage}<p class="text-foreground" role="status">{csvMessage}</p>{/if}
+      {#if csvError}<p class="text-destructive" role="alert">{csvError}</p>{/if}
+    </div>
+
     <Dialog.Footer>
       <Button
         variant="outline"
         onclick={() => (open = false)}
       >
         Cancel
+      </Button>
+      <Button variant="outline" onclick={exportCsv} disabled={csvBusy || totalCount === 0}>
+        <Download size={14} />
+        {csvBusy ? 'Exporting…' : 'Crash data (CSV)'}
       </Button>
       <Button onclick={generate}>
         <FileText size={14} />

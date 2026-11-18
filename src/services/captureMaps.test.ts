@@ -64,6 +64,7 @@ function makePayload(sites: Site[]): ReportPayload {
         byEmphasisArea: {},
       },
       alternatives: [],
+      selectedPreventableCrashes: [],
     })),
     countermeasures: [],
     methods: {

@@ -14,6 +14,10 @@ name: Deploy to GitHub Pages
 #
 # To retire the preview, set PREVIEW_REF to ''. To keep an old version for
 # reference after a switch-over, point PREVIEW_REF at a tag of it.
+#
+# RETIRED_PATHS lists subfolders that once held a preview and were shared by
+# link; each gets a page that redirects to the official site, so old links
+# keep working. A path in use by the preview must not be listed.
 
 on:
   push:
@@ -30,9 +34,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  PREVIEW_REF: hsip-2027-update
-  PREVIEW_PATH: "2027"
-  PREVIEW_LABEL: 2027 HSIP update - preview
+  # The 2027 update was released to main on 2026-11-18; no preview is live.
+  PREVIEW_REF: ""
+  PREVIEW_PATH: ""
+  PREVIEW_LABEL: ""
+  RETIRED_PATHS: "2027"
 
 jobs:
   build:
@@ -91,6 +97,23 @@ jobs:
           VITE_PREVIEW_LABEL="$PREVIEW_LABEL" npx vite build \
             --base "/${GITHUB_REPOSITORY#*/}/${PREVIEW_PATH}/" \
             --outDir "../dist/${PREVIEW_PATH}" --emptyOutDir
+
+      - name: Redirect retired preview links
+        if: env.RETIRED_PATHS != ''
+        run: |
+          base="/${GITHUB_REPOSITORY#*/}/"
+          for p in $RETIRED_PATHS; do
+            mkdir -p "dist/$p"
+            cat > "dist/$p/index.html" <<HTML
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>HSIP Sketch Planning Tool</title>
+          <meta http-equiv="refresh" content="0; url=$base">
+          <link rel="canonical" href="$base">
+          <script>location.replace('$base')</script>
+          <p>The HSIP Sketch Planning Tool has moved to <a href="$base">$base</a>.</p>
+          HTML
+          done
 
       - uses: actions/upload-pages-artifact@v3
         with:

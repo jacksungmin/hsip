@@ -71,6 +71,18 @@ buffer.
 Supports: building a list of locations by drawing or uploading, and
 tuning how far each one reaches.
 
+### Finding a location on the map
+
+A search box on the map finds a city or county by name and zooms to
+it, or takes coordinates (latitude and longitude, in either order)
+and flies there with a marker to draw the site at. Names come from
+the boundary data the app already holds, so search works offline and
+sends nothing anywhere; a point outside the H-GAC region is flagged,
+since there is no crash data there. Street addresses are not
+searchable (see `08-future-ideas.md`).
+Supports: finding a location before drawing a site by hand (raised by
+Kimley-Horn for LSAP agencies).
+
 ### Reference overlay layers
 
 The app can draw extra map layers as background reference, each

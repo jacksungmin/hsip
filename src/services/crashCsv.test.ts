@@ -113,7 +113,7 @@ describe('buildCrashCsv', () => {
       emphasis_areas: `${EA_LABELS.EA_08_Ped}; ${EA_LABELS.EA_14_Dark}`,
       preventable_work_codes: '109; 403',
       selected_work_code: '109',
-      preventable_by_selected: 'Yes',
+      counted_in_selected_sii: 'Yes',
     })
   })
 
@@ -123,7 +123,24 @@ describe('buildCrashCsv', () => {
       { site: s, crashes: [crash('old', `${beforePeriod}-01-15`, ['HSIP_403'])], selectedWorkcode: '109' },
     ])
     expect(rows[0].in_sii_period).toBe('No')
-    expect(rows[0].preventable_by_selected).toBe('No')
+    expect(rows[0].counted_in_selected_sii).toBe('No')
+  })
+
+  // Found in the end-to-end test: counting criteria matches in every year
+  // gave 28 "Yes" rows where the report listed 15 preventable crashes.
+  it('counts a crash for the selected SII only inside the analysis period', () => {
+    const s = site('Main St', [part('p1', 'P1', ['old', 'new'])])
+    const { rows } = rowsOf([
+      {
+        site: s,
+        crashes: [crash('old', `${beforePeriod}-06-01`, ['HSIP_109']), crash('new', `${inPeriod}-06-01`, ['HSIP_109'])],
+        selectedWorkcode: '109',
+      },
+    ])
+    const byId = Object.fromEntries(rows.map((r) => [r.crash_id, r]))
+    expect(byId.old.preventable_work_codes).toBe('109')
+    expect(byId.old.counted_in_selected_sii).toBe('No')
+    expect(byId.new.counted_in_selected_sii).toBe('Yes')
   })
 
   it('leaves the selection columns blank when the site has no selected countermeasure', () => {
@@ -131,7 +148,7 @@ describe('buildCrashCsv', () => {
       { site: site('S', [part('p1', 'P1', ['c1'])]), crashes: [crash('c1', `${inPeriod}-01-01`)], selectedWorkcode: null },
     ])
     expect(rows[0].selected_work_code).toBe('')
-    expect(rows[0].preventable_by_selected).toBe('')
+    expect(rows[0].counted_in_selected_sii).toBe('')
   })
 
   it('lists every part a crash falls in, and leaves city blank when there is none', () => {

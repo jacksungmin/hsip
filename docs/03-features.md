@@ -170,9 +170,10 @@ Supports: exporting a report at the end of the work.
 The user downloads a CSV of every crash inside every site's buffer,
 all years, one row per crash per site: the site and part, crash ID,
 date, severity, location, county and city, emphasis areas, the work
-codes the crash counts toward, whether it falls in the SII analysis
-period, and whether the site's marked alternative is credited against
-it. It covers all sites, marked or not. It serves analysis outside
+codes whose criteria the crash matches (any year), whether it falls
+in the SII analysis period, and whether it is counted in the marked
+alternative's SII (criteria match and in the period, so these rows
+add up to the report's preventable figures). It covers all sites, marked or not. It serves analysis outside
 the tool and the crash-level detail an application needs; full CRIS
 attributes can be joined by crash ID.
 Supports: exporting a report at the end of the work.

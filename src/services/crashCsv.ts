@@ -39,7 +39,7 @@ export const CRASH_CSV_COLUMNS = [
   'emphasis_areas',
   'preventable_work_codes',
   'selected_work_code',
-  'preventable_by_selected',
+  'counted_in_selected_sii',
 ] as const
 
 // RFC 4180 quoting: a field with a comma, quote or line break is quoted,
@@ -78,6 +78,7 @@ export function buildCrashCsv(input: CrashExportInput): string {
       const flags = crash as Record<string, unknown>
       const eas = EA_IDS.filter((id) => flags[id] === 1).map((id) => EA_LABELS[id])
       const codes = HSIP_FIELDS.filter((f) => flags[f] === 1).map((f) => f.slice(5))
+      const inPeriod = inHsipPeriod(crashYear(crash.date))
       const row = [
         userText(site.name),
         site.type,
@@ -86,7 +87,7 @@ export function buildCrashCsv(input: CrashExportInput): string {
         crash.date,
         String(crashYear(crash.date)),
         crash.severity,
-        yesNo(inHsipPeriod(crashYear(crash.date))),
+        yesNo(inPeriod),
         crash.lat.toFixed(6),
         crash.lon.toFixed(6),
         input.countyNames[crash.countyId] ?? crash.countyId,
@@ -94,7 +95,11 @@ export function buildCrashCsv(input: CrashExportInput): string {
         eas.join('; '),
         codes.join('; '),
         selectedWorkcode ?? '',
-        selectedWorkcode ? yesNo(codes.includes(selectedWorkcode)) : '',
+        // Yes only for crashes the selected countermeasure's SII counts: its
+        // criteria match AND the crash is in the analysis period. So these
+        // rows add up to the report's preventable figures and Appendix C;
+        // preventable_work_codes shows criteria matches in every year.
+        selectedWorkcode ? yesNo(inPeriod && codes.includes(selectedWorkcode)) : '',
       ]
       lines.push(row.map(csvField).join(','))
     }

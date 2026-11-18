@@ -12,6 +12,7 @@ import type {
   CrashRecord,
   ProjectInfo,
   ReportPayload,
+  ReportCrashRef,
   ReportSiteBlock,
   Site,
   SeverityTriplet,
@@ -128,7 +129,30 @@ function buildSiteBlock(
       byEmphasisArea,
     },
     alternatives,
+    selectedPreventableCrashes: preventableCrashesFor(
+      crashes,
+      siteAlts.find((a) => a.id === chosen.altId)?.workcode,
+    ),
   }
+}
+
+const SEVERITY_ORDER: Record<string, number> = { K: 0, A: 1, B: 2 }
+
+// The crashes a work code is credited against, from the site's period
+// crashes: the same flag the SII counts, so the IDs listed always add up to
+// the alternative's preventable K/A/B counts.
+function preventableCrashesFor(crashes: CrashRecord[], workcode: string | undefined): ReportCrashRef[] {
+  if (!workcode) return []
+  const flag = `HSIP_${workcode}`
+  return crashes
+    .filter((c) => (c as Record<string, unknown>)[flag] === 1)
+    .map((c) => ({ id: c.id, date: c.date, severity: c.severity }))
+    .sort(
+      (a, b) =>
+        SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] ||
+        a.date.localeCompare(b.date) ||
+        a.id.localeCompare(b.id),
+    )
 }
 
 export function assembleReport(input: AssembleReportInput): ReportPayload {

@@ -211,7 +211,15 @@ export type ReportSiteBlock = {
     SII: number | null
     isChosen: boolean
   }>
+  // The crashes the selected (chosen) countermeasure is credited against, in
+  // the SII analysis period: the preventable crash IDs an HSIP application
+  // lists. Ordered K, A, B, then by date. Empty when the selected work code
+  // credits no crash at the site.
+  selectedPreventableCrashes: ReportCrashRef[]
 }
+
+// One crash as the report lists it.
+export type ReportCrashRef = { id: string; date: string; severity: Severity }
 
 export type ReportPayload = {
   generatedAt: string

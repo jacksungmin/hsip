@@ -8,6 +8,7 @@
   import ReportAbout from './ReportAbout.svelte'
   import ReportCalculationAppendix from './ReportCalculationAppendix.svelte'
   import ReportCountermeasureAppendix from './ReportCountermeasureAppendix.svelte'
+  import ReportPreventableCrashAppendix from './ReportPreventableCrashAppendix.svelte'
   import ReportMapMeta from './ReportMapMeta.svelte'
   import ReportSiteSection from './ReportSiteSection.svelte'
 
@@ -148,6 +149,7 @@
           {/each}
           <tr><td class="report-label">Discount rate</td><td>6% (TxDOT HSIP)</td></tr>
           <tr><td class="report-label">Method</td><td>TxDOT HSIP Safety Investment Index (SII). See Appendix B.</td></tr>
+          <tr><td class="report-label">Preventable crash IDs</td><td>By site and severity, for the selected countermeasure. See Appendix C.</td></tr>
         </tbody>
       </table>
     </div>
@@ -160,6 +162,7 @@
 
   <ReportCountermeasureAppendix countermeasures={payload.countermeasures} />
   <ReportCalculationAppendix methods={payload.methods} />
+  <ReportPreventableCrashAppendix sites={payload.sites} methods={payload.methods} />
 
   <!-- Document footer (last page only; per-page footers need Paged.js) -->
   <div class="report-doc-footer">

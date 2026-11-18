@@ -231,3 +231,40 @@ describe('assembleReport', () => {
     expect(reportAlt.expectedReduction).toEqual({ K: 0, A: 0, B: 0 })
   })
 })
+
+// Appendix C lists the crashes behind the selected countermeasure's SII.
+describe('selectedPreventableCrashes', () => {
+  it("lists the chosen work code's crashes, ordered K, A, B then by date", () => {
+    const crashes = [
+      makeCrash({ id: 'b1', severity: 'B', date: '2024-02-01' }),
+      makeCrash({ id: 'k2', severity: 'K', date: '2025-01-01' }),
+      makeCrash({ id: 'a1', severity: 'A', date: '2023-05-01' }),
+      makeCrash({ id: 'k1', severity: 'K', date: '2023-03-01' }),
+      makeCrash({ id: 'x1', severity: 'K', HSIP_101: 0 } as Partial<CrashRecord>),
+    ]
+    const result = assembleReport(makeInput({ crashesBySite: { 'site:1': crashes } }))
+    const block = result.sites[0]
+    expect(block.selectedPreventableCrashes.map((c) => c.id)).toEqual(['k1', 'k2', 'a1', 'b1'])
+    expect(block.selectedPreventableCrashes[0]).toEqual({ id: 'k1', date: '2023-03-01', severity: 'K' })
+    // The listed IDs add up to the counts the SII used.
+    const chosen = block.alternatives.find((a) => a.isChosen)!
+    expect(chosen.addressableCrashes).toEqual({ K: 2, A: 1, B: 1 })
+  })
+
+  it('follows the chosen alternative, not the other alternatives at the site', () => {
+    const cm107 = makeCm({ workcode: '107', name: 'Install Traffic Signal' })
+    const crashes = [
+      makeCrash({ id: 'only101' }),
+      makeCrash({ id: 'only107', HSIP_101: 0, HSIP_107: 1 } as Partial<CrashRecord>),
+    ]
+    const result = assembleReport(
+      makeInput({
+        alternatives: [makeAlt(), makeAlt({ id: 'alt:2', workcode: '107' })],
+        countermeasureCatalog: [makeCm(), cm107],
+        chosenBySite: { 'site:1': { altId: 'alt:2', source: 'pin', prevented: { K: 0, A: 0, B: 0 } } },
+        crashesBySite: { 'site:1': crashes },
+      }),
+    )
+    expect(result.sites[0].selectedPreventableCrashes.map((c) => c.id)).toEqual(['only107'])
+  })
+})

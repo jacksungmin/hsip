@@ -32,6 +32,7 @@
   import type { Component } from 'svelte'
   import ReportGenerationOverlay from './components/ReportGenerationOverlay.svelte'
   import { PREVIEW_LABEL } from './data/release'
+  import MapSearch from './components/MapSearch.svelte'
   import ErrorScreen from './components/ErrorScreen.svelte'
   import ErrorNotices from './components/ErrorNotices.svelte'
   import { errorState } from './state/errorState.svelte'
@@ -211,6 +212,7 @@
               <CurrentRegionLayer />
               <SiteBufferLayer />
               <DrawControl {onDrawComplete} />
+              <MapSearch />
             </MapView>
           {/snippet}
         </MapToolbar>

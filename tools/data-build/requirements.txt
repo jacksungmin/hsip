@@ -1,5 +1,6 @@
 geopandas>=0.14
-pandas>=2.0
+# pandas 3 changed string and copy defaults; the pipeline is verified on 2.x.
+pandas>=2.0,<3
 pyyaml>=6.0
 shapely>=2.0
 requests>=2.31

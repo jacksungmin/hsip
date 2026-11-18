@@ -75,6 +75,16 @@ This is configuration work rather than code. It needs an entry in the
 data build for a tile set carrying the right attributes, and a layer
 in `config/overlays.yaml` coloring by them.
 
+## Searching by street address
+
+Map search finds cities, counties and coordinates from data the app
+already holds. Finding a street address or a named intersection needs
+a geocoding service, which would make the app send what users type to
+a third party and depend on a network service during use, which the
+app otherwise avoids. Free services also limit usage. If agencies
+need it, choose a provider with terms that fit public-sector use, and
+call it only from the search box, never on load.
+
 ## Choosing which countermeasures reach the report
 
 Let the user narrow the export, per site or across all sites, instead

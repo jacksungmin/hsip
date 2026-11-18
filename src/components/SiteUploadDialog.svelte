@@ -169,14 +169,14 @@
         </div>
 
         <div>
-          <label class="text-sm font-medium">
+          <p class="text-sm font-medium" id="upload-name-column-label">
             {siteType === 'roadway' ? 'Segment' : 'Intersection'} name column
-          </label>
+          </p>
           <p class="mt-0.5 text-xs text-muted-foreground">
             Attribute to use for part names. Leave as "None" to auto-generate.
           </p>
           <Select.Root type="single" value={nameColumn ?? ''} onValueChange={(v) => { nameColumn = v || null }}>
-            <Select.Trigger class="mt-1 w-full">
+            <Select.Trigger class="mt-1 w-full" aria-labelledby="upload-name-column-label">
               {nameColumn || 'None — auto-generate'}
             </Select.Trigger>
             <Select.Content>

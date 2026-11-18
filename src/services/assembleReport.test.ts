@@ -261,7 +261,7 @@ describe('selectedPreventableCrashes', () => {
       makeInput({
         alternatives: [makeAlt(), makeAlt({ id: 'alt:2', workcode: '107' })],
         countermeasureCatalog: [makeCm(), cm107],
-        chosenBySite: { 'site:1': { altId: 'alt:2', source: 'pin', prevented: { K: 0, A: 0, B: 0 } } },
+        chosenBySite: { 'site:1': { altId: 'alt:2', source: 'explicit', prevented: { K: 0, A: 0, B: 0 } } },
         crashesBySite: { 'site:1': crashes },
       }),
     )

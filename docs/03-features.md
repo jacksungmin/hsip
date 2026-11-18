@@ -159,9 +159,22 @@ alternative is flagged. Map images are included, one overview and
 one per site.
 
 Only sites with a marked alternative appear in the report. Crash
-counts are given as totals rather than as a list of individual
-crashes, which is enough for both planning documents and grant
-applications.
+counts are given as totals in the site sections. An appendix lists,
+for each site, the crash IDs by severity that the marked alternative
+is credited against in the SII analysis period, because an HSIP
+application asks for them (raised by Kimley-Horn for LSAP agencies).
+Supports: exporting a report at the end of the work.
+
+### Crash data export
+
+The user downloads a CSV of every crash inside every site's buffer,
+all years, one row per crash per site: the site and part, crash ID,
+date, severity, location, county and city, emphasis areas, the work
+codes the crash counts toward, whether it falls in the SII analysis
+period, and whether the site's marked alternative is credited against
+it. It covers all sites, marked or not. It serves analysis outside
+the tool and the crash-level detail an application needs; full CRIS
+attributes can be joined by crash ID.
 Supports: exporting a report at the end of the work.
 
 ## Spanning both halves

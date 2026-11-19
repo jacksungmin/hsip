@@ -44,3 +44,8 @@ public/jurisdictions.geojson
 # copies placed under input_data/cris_export/.
 CRIS_data/
 2027/
+
+# Ad-hoc site files dropped in the repo root for testing (e.g. files received
+# from partners). Built data lives in public/, which this does not touch.
+/*.geojson
+/*.zip

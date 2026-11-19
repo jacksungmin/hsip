@@ -137,7 +137,7 @@
     // Separate sites are named after their parts, so an unnamed feature
     // takes the entered prefix ("Main St 1") rather than a generic
     // "Intersection 1" that would collide across uploads.
-    const base = createAs === 'separate' ? siteName.trim() : partNameBase(uploadType)
+    const base = createAs === 'separate' ? siteName.trim() || partNameBase(uploadType) : partNameBase(uploadType)
     const parts = await Promise.all(
       result.features.map(async (f, i) => {
         return createPart({

@@ -52,7 +52,15 @@ its type is chosen as it is drawn:
 
 Sites can also come from an uploaded file (`.geojson`, or a `.shp`
 in a zip). A file of points becomes an intersection site; a file of
-lines becomes a roadway site. A file holding several shapes produces,
+lines becomes a roadway site. Coordinates are converted to WGS 84 from
+the file's declared coordinate system: a shapefile's `.prj`, or a
+GeoJSON `crs` member naming one of the Texas State Plane, Texas-wide,
+UTM 14N/15N or Web Mercator systems (NAD83 or NAD27; NAD27 positions
+in the region are shifted 28-41 m, which the tool corrects from
+NOAA's grid). A file whose coordinates are not longitude/latitude and
+do not say what they are is refused with instructions rather than
+placed somewhere else, and locations outside the H-GAC region are
+flagged before the sites are created. A file holding several shapes produces,
 at the user's choice, **one site per shape** (the default, so an agency
 can load all its project locations at once and review each separately)
 or **one site with several parts** analyzed together. A site with

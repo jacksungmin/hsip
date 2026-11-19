@@ -8,6 +8,8 @@
   import FileIcon from '@lucide/svelte/icons/file'
   import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle'
   import AlertCircleIcon from '@lucide/svelte/icons/alert-circle'
+  import { jurisdictionStore } from '../state/jurisdictionStore.svelte'
+  import { inBbox, regionBbox, type Bbox } from '../services/regionBounds'
 
   type SiteType = 'roadway' | 'intersection'
 
@@ -115,6 +117,20 @@
 
   const geomLabel = $derived(siteType === 'roadway' ? 'line' : 'point')
   const featureCount = $derived(parseResult?.features.length ?? 0)
+
+  // Locations outside the region have no crash data. A wrong coordinate
+  // system that still yields valid longitudes and latitudes ends up here
+  // too, so say how many before the sites are created.
+  let region = $state<Bbox | null>(null)
+  jurisdictionStore.list().then((list) => { region = regionBbox(list) }).catch(() => { region = null })
+  const outsideCount = $derived.by(() => {
+    if (!parseResult || !region) return 0
+    const box = region
+    return parseResult.features.filter((f) => {
+      const coords = f.geometry.type === 'Point' ? [f.geometry.coordinates] : (f.geometry.coordinates as number[][])
+      return coords.some((p) => !inBbox(box, p[0], p[1]))
+    }).length
+  })
   const separate = $derived(featureCount > 1 && createAs === 'separate')
   const noun = $derived(siteType === 'roadway' ? 'segment' : 'intersection')
 </script>
@@ -173,8 +189,20 @@
 
         {#if parseResult.crs}
           <p class="text-xs text-muted-foreground">
-            Coordinates reprojected from source CRS to WGS 84.
+            Coordinates converted from {parseResult.crs} to WGS 84{parseResult.nad27 ? ', including the NAD27 to NAD83 datum shift' : ''}.
           </p>
+        {/if}
+
+        {#if outsideCount > 0}
+          <div class="flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900" role="status">
+            <AlertCircleIcon class="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              {outsideCount === featureCount ? 'All' : `${outsideCount} of ${featureCount}`}
+              {featureCount === 1 ? 'location falls' : 'locations fall'} outside the H-GAC region, so
+              {outsideCount === 1 ? 'it' : 'they'} will have no crash data. If they should be in the region, check
+              the file's coordinate system.
+            </span>
+          </div>
         {/if}
 
         {#if featureCount > 1}
@@ -203,7 +231,7 @@
           <label for="upload-site-name" class="text-sm font-medium">{separate ? 'Site name prefix' : 'Site name'}</label>
           {#if separate}
             <p class="mt-0.5 text-xs text-muted-foreground">
-              Sites are named from the name column below, or "{siteName.trim() || 'Prefix'} 1", "{siteName.trim() || 'Prefix'} 2"… if none is chosen.
+              Optional. Locations without a name from the column below are named "{siteName.trim() || noun.charAt(0).toUpperCase() + noun.slice(1)} 1", "{siteName.trim() || noun.charAt(0).toUpperCase() + noun.slice(1)} 2"…
             </p>
           {/if}
           <Input id="upload-site-name" bind:value={siteName} class="mt-1" />
@@ -234,7 +262,9 @@
     <Dialog.Footer class="mt-4">
       <Button variant="outline" onclick={() => { open = false }}>Cancel</Button>
       {#if step === 'configure'}
-        <Button onclick={confirm} disabled={!siteName.trim() || creating}>
+        <!-- A group needs a name; separate sites are named from the file, so a
+             prefix is optional (unnamed locations fall back to "Intersection 1"). -->
+        <Button onclick={confirm} disabled={(!separate && !siteName.trim()) || creating}>
           {#if creating}
             <LoaderCircleIcon class="mr-1.5 h-4 w-4 animate-spin" />
           {/if}

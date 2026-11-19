@@ -235,3 +235,83 @@ describe('applyNameColumn', () => {
     expect(renamed[1].name).toBe('X')
   })
 })
+
+// Reported by Kimley-Horn: uploads "did not load to locations" and buffers
+// looked shifted. GeoJSON in a projected system was read as degrees (State
+// Plane landed in China), and NAD27 data landed about 30 m off.
+describe('coordinate systems', () => {
+  // EPSG:2278 (NAD83 / Texas South Central, ftUS) coordinates of downtown
+  // Houston (-95.3698, 29.7604), from PROJ.
+  const SP_X = 3120099.09
+  const SP_Y = 13841900.86
+
+  const projected = (crs: unknown, coords: number[]) => ({
+    type: 'FeatureCollection',
+    crs,
+    features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: coords } }],
+  })
+
+  it('converts GeoJSON that declares a State Plane system', async () => {
+    const r = await parseUploadedFile(
+      geojsonFile(projected({ type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::2278' } }, [SP_X, SP_Y])),
+      'intersection',
+    )
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const [lon, lat] = (r.result.features[0].geometry as { coordinates: number[] }).coordinates
+    expect(lon).toBeCloseTo(-95.3698, 4)
+    expect(lat).toBeCloseTo(29.7604, 4)
+    expect(r.result.crs).toBe('NAD83 / Texas South Central (ftUS) (EPSG:2278)')
+    expect(r.result.nad27).toBe(false)
+  })
+
+  it('reads the older {"type":"EPSG"} crs form too', async () => {
+    const r = await parseUploadedFile(geojsonFile(projected({ type: 'EPSG', properties: { code: 2278 } }, [SP_X, SP_Y])), 'intersection')
+    expect(r.ok && (r.result.features[0].geometry as { coordinates: number[] }).coordinates[0]).toBeCloseTo(-95.3698, 4)
+  })
+
+  it('leaves CRS84 / EPSG:4326 coordinates as they are', async () => {
+    for (const name of ['urn:ogc:def:crs:OGC:1.3:CRS84', 'urn:ogc:def:crs:EPSG::4326']) {
+      const r = await parseUploadedFile(geojsonFile(projected({ type: 'name', properties: { name } }, [-95.36, 29.76])), 'intersection')
+      expect(r.ok && (r.result.features[0].geometry as { coordinates: number[] }).coordinates).toEqual([-95.36, 29.76])
+      expect(r.ok && r.result.crs).toBeNull()
+    }
+  })
+
+  it('applies the NAD27 datum shift for NAD27 State Plane', async () => {
+    // EPSG:32040 (NAD27 / Texas South Central, ft) coordinates whose NAD83
+    // position is downtown Houston, through NOAA's grid (from the fixture).
+    const fixture = (await import('../data/projections.fixture.json')).default as Array<{ code: number; lon: number; x: number; y: number }>
+    const ref = fixture.find((f) => f.code === 32040 && f.lon === -95.3698)!
+    const r = await parseUploadedFile(
+      geojsonFile(projected({ type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::32040' } }, [ref.x, ref.y])),
+      'intersection',
+    )
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    const [lon, lat] = (r.result.features[0].geometry as { coordinates: number[] }).coordinates
+    // Within about 0.1 m of the true position, where proj4js alone was ~30 m off.
+    expect(lon).toBeCloseTo(-95.3698, 6)
+    expect(lat).toBeCloseTo(29.7604, 6)
+    expect(r.result.nad27).toBe(true)
+  })
+
+  it('rejects a coordinate system it cannot convert, naming it', async () => {
+    const r = await parseUploadedFile(
+      geojsonFile(projected({ type: 'name', properties: { name: 'urn:ogc:def:crs:EPSG::27700' } }, [530000, 180000])),
+      'intersection',
+    )
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.error.type).toBe('unsupported-crs')
+    expect(r.error.message).toContain('EPSG:27700')
+  })
+
+  it('rejects projected coordinates with no declared system instead of misplacing them', async () => {
+    const r = await parseUploadedFile(geojsonFile(projected(undefined, [SP_X, SP_Y])), 'intersection')
+    expect(r.ok).toBe(false)
+    if (r.ok) return
+    expect(r.error.type).toBe('not-lon-lat')
+    expect(r.error.message).toContain('3,120,099.09')
+  })
+})

@@ -10,6 +10,7 @@
   import X from '@lucide/svelte/icons/x'
   import { jurisdictionStore } from '../state/jurisdictionStore.svelte'
   import { parseCoordinates, searchPlaces, type PlaceMatch } from '../services/mapSearch'
+  import { inBbox, regionBbox } from '../services/regionBounds'
   import type { Jurisdiction } from '../types'
 
   const map = getContext<() => maplibregl.Map>('map')()
@@ -27,11 +28,7 @@
   const matches = $derived<PlaceMatch[]>(coords ? [] : searchPlaces(query, places))
 
   // Bounding box of the counties: the area the crash data covers.
-  const regionBox = $derived.by(() => {
-    const counties = places.filter((p) => p.type === 'county')
-    if (counties.length === 0) return null
-    return turfBbox({ type: 'FeatureCollection', features: counties.map((c) => ({ type: 'Feature', properties: {}, geometry: c.geometry })) })
-  })
+  const regionBox = $derived(regionBbox(places))
 
   function clearMarker() {
     marker?.remove()
@@ -56,7 +53,7 @@
     marker = pin.addTo(map)
     map.flyTo({ center: [c.lon, c.lat], zoom: 17, duration: 800 })
     const box = regionBox
-    const outside = box && (c.lon < box[0] || c.lon > box[2] || c.lat < box[1] || c.lat > box[3])
+    const outside = box && !inBbox(box, c.lon, c.lat)
     notice = outside
       ? 'This point is outside the H-GAC region, so there is no crash data there.'
       : 'Marked. To add a site here, choose Intersection or Roadway and draw at the marker.'

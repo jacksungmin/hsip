@@ -178,7 +178,12 @@
       {/if}
 
     {:else if step === 'configure' && parseResult}
-      <div class="mt-2 space-y-4">
+      <!-- min-w-0: the dialog lays its content out on a grid, and a grid item
+           will not shrink below its content's natural width. A long file name
+           (on one line before it truncates) then widened the whole column past
+           the dialog's right edge, shifting every box right (reported by KH).
+           The fieldset gets the same, overriding browsers' min-content default. -->
+      <div class="mt-2 min-w-0 space-y-4">
         <div class="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm">
           <FileIcon class="h-4 w-4 shrink-0 text-muted-foreground" />
           <span class="truncate">{fileName}</span>
@@ -206,7 +211,7 @@
         {/if}
 
         {#if featureCount > 1}
-          <fieldset>
+          <fieldset class="min-w-0">
             <legend class="text-sm font-medium">Create as</legend>
             <div class="mt-1 grid gap-2">
               <label class="flex cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm {createAs === 'separate' ? 'border-primary bg-primary/5' : ''}">
